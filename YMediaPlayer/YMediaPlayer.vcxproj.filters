@@ -32,7 +32,7 @@
     <ClCompile Include="YMediaPlayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="decode_audio.c">
+    <ClCompile Include="decode_audio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -155,7 +155,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="decode_audio.c" />
+    <ClCompile Include="decode_audio.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="YMediaPlayer.cpp" />
   </ItemGroup>
