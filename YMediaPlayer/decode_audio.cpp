@@ -39,7 +39,6 @@ extern "C"
 #include <libavcodec/avcodec.h>
 }
 
-
 #define AUDIO_INBUF_SIZE 20480
 #define AUDIO_REFILL_THRESH 4096
 
@@ -95,37 +94,10 @@ struct FormatCtx {
 
 struct CodecCtx {
 	inline CodecCtx(AVFormatContext * format_ctx , AVMediaType type)//AVMEDIA_TYPE_AUDIO
-		:stream_index_(-1)
-		,codec_ctx_(nullptr)
+		:format_(format_ctx)
+		, type_(type)
 	{
-		for (size_t i = 0; i < format_ctx->nb_streams; ++i) {
-			AVCodecContext* tc = format_ctx->streams[i]->codec;
-			if (tc->codec_type == type) {
-				codec_ctx_ = tc;
-				stream_index_ = i;
-				break;
-			}
-		}
-		if (codec_ctx_)
-		{
-			AVCodec* codec = avcodec_find_decoder(codec_ctx_->codec_id);
-			if (!codec) {
-				fprintf(stderr, "Codec not found\n");
-				exit(1);
-			}
 
-			codec_ctx_ = avcodec_alloc_context3(codec);
-			if (!codec_ctx_) {
-				fprintf(stderr, "Could not allocate audio codec context\n");
-				exit(1);
-			}
-
-			/* open it */
-			if (avcodec_open2(codec_ctx_, codec, NULL) < 0) {
-				fprintf(stderr, "Could not open codec\n");
-				exit(1);
-			}
-		}
 	}
 
 	~CodecCtx()
@@ -133,8 +105,60 @@ struct CodecCtx {
 		avcodec_free_context(&codec_ctx_);
 	}
 
+	bool InitDecoder()
+	{
+		int ret, stream_index;
+		AVStream *st;
+		AVCodec *dec = NULL;
+		AVDictionary *opts = NULL;
+
+		ret = av_find_best_stream(format_, type_, -1, -1, NULL, 0);
+		if (ret < 0) {
+			/*	fprintf(stderr, "Could not find %s stream in input file '%s'\n",
+			av_get_media_type_string(type), src_filename);*/
+			return ret;
+		}
+		else {
+			stream_index = ret;
+			st = format_->streams[stream_index];
+
+			/* find decoder for the stream */
+			dec = avcodec_find_decoder(st->codecpar->codec_id);
+			if (!dec) {
+				fprintf(stderr, "Failed to find %s codec\n",
+					av_get_media_type_string(type_));
+				return AVERROR(EINVAL);
+			}
+
+			/* Allocate a codec context for the decoder */
+			codec_ctx_ = avcodec_alloc_context3(dec);
+			if (!codec_ctx_) {
+				fprintf(stderr, "Failed to allocate the %s codec context\n",
+					av_get_media_type_string(type_));
+				return AVERROR(ENOMEM);
+			}
+
+			/* Copy codec parameters from input stream to output codec context */
+			if ((ret = avcodec_parameters_to_context(codec_ctx_, st->codecpar)) < 0) {
+				fprintf(stderr, "Failed to copy %s codec parameters to decoder context\n",
+					av_get_media_type_string(type_));
+				return ret;
+			}
+
+			/* Init the decoders, with or without reference counting */
+			av_dict_set(&opts, "refcounted_frames", "0", 0);
+			if ((ret = avcodec_open2(codec_ctx_, dec, &opts)) < 0) {
+				fprintf(stderr, "Failed to open %s codec\n",
+					av_get_media_type_string(type_));
+				return ret;
+			}
+			stream_index_ = stream_index;
+		}
+	}
+	AVFormatContext *format_;
 	AVCodecContext *codec_ctx_;
 	int stream_index_;
+	AVMediaType type_;
 };
 
 
@@ -153,9 +177,12 @@ int main(int argc, char **argv)
 	FormatCtx formatCtx_(filename);
     /* find the MPEG audio decoder */
 	CodecCtx audio_codec_ctx(formatCtx_.ctx_, AVMEDIA_TYPE_AUDIO);
+
+	audio_codec_ctx.InitDecoder();
+
 	CodecCtx video_codec_ctx(formatCtx_.ctx_, AVMEDIA_TYPE_VIDEO);
 
-
+	video_codec_ctx.InitDecoder();
 
     outfile = fopen(outfilename, "wb");
     if (!outfile) {
@@ -168,7 +195,7 @@ int main(int argc, char **argv)
 	{
 		if (formatCtx_.pkg_->stream_index == audio_codec_ctx.stream_index_)
 		{
-			printf("audio_stream :%d %d %d --size\n", bytes_persample, formatCtx_.pkg_->pos, formatCtx_.pkg_->size);
+			printf("audio_stream :%d %d %d %d--size\n", bytes_persample, formatCtx_.pkg_->pos,  formatCtx_.pkg_->pts, formatCtx_.pkg_->size);
 			DecodeAudio(audio_codec_ctx.codec_ctx_, formatCtx_.pkg_, decoded_frame, bytes_persample, outfile);
 		}
 		else if (formatCtx_.pkg_->stream_index == video_codec_ctx.stream_index_)
@@ -188,5 +215,6 @@ int main(int argc, char **argv)
     fclose(outfile);
 
     av_frame_free(&decoded_frame);
+	system("pause");
     return 0;
 }
