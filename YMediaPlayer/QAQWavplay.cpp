@@ -239,7 +239,6 @@ int main(int argc, char* argv[])
 	* wait for all blocks to complete
 	*/
 	while (waveFreeBlockCount < BLOCK_COUNT)
-
 		Sleep(10);
 
 	/*

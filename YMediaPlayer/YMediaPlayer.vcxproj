@@ -153,10 +153,12 @@
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="WavPlayer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="decode_audio.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="WavPlayer.cpp" />
     <ClCompile Include="YMediaPlayer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

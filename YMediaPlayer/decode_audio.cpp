@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "WavPlayer.h"
 
 extern "C"
 {
@@ -41,10 +42,13 @@ extern "C"
 
 #define AUDIO_INBUF_SIZE 20480
 #define AUDIO_REFILL_THRESH 4096
+static WavPlayer s_player;
 
 static void DecodeAudio(AVCodecContext *dec_ctx, AVPacket *pkt, AVFrame *frame,
                    int bytes_persample,FILE *outfile)
 {
+	
+
 	int ret = avcodec_send_packet(dec_ctx, pkt);
 	if (ret != 0)
 	{
@@ -56,8 +60,12 @@ static void DecodeAudio(AVCodecContext *dec_ctx, AVPacket *pkt, AVFrame *frame,
     while ( (ret = avcodec_receive_frame(dec_ctx, frame))  ==  0 ) 
 	{
         for (int i = 0; i < frame->nb_samples; i++)
-            for (int ch = 0; ch < dec_ctx->channels; ch++)
-                fwrite(frame->data[ch] + bytes_persample*i, 1, bytes_persample, outfile);
+			for (int ch = 0; ch < dec_ctx->channels; ch++)
+			{
+
+				fwrite(frame->data[ch] + bytes_persample*i, 1, bytes_persample, outfile);
+				s_player.AddBuff((char*)frame->data[ch] + bytes_persample*i, bytes_persample);
+			}
     }
 }
 
@@ -183,6 +191,8 @@ int main(int argc, char **argv)
 	CodecCtx video_codec_ctx(formatCtx_.ctx_, AVMEDIA_TYPE_VIDEO);
 
 	video_codec_ctx.InitDecoder();
+
+	s_player.InitPlayer(audio_codec_ctx.codec_ctx_->sample_rate, av_get_bytes_per_sample(audio_codec_ctx.codec_ctx_->sample_fmt),audio_codec_ctx.codec_ctx_->channels);
 
     outfile = fopen(outfilename, "wb");
     if (!outfile) {
