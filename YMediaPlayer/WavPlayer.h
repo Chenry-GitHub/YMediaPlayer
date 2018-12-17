@@ -8,7 +8,7 @@ public:
 	WavPlayer();
 	~WavPlayer();
 
-	bool InitPlayer(int sample_rate, int sample_size, int channels);
+	bool InitPlayer(int sample_rate, int channels, int bytes_persec);
 
 	void Reset();
 
@@ -44,4 +44,6 @@ private:
 
 
 };
+
+
 

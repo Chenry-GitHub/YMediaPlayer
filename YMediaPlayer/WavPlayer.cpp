@@ -140,7 +140,7 @@ WavPlayer::~WavPlayer()
 }
 
 
-bool WavPlayer::InitPlayer(int sample_rate,int sample_size,int channels)
+bool WavPlayer::InitPlayer(int sample_rate,int channels, int bytes_persec)
 {
 	WAVEFORMATEX wfx; /* look this up in your documentation */
 					  /*
@@ -154,12 +154,12 @@ bool WavPlayer::InitPlayer(int sample_rate,int sample_size,int channels)
 	* set up the WAVEFORMATEX structure.
 	*/
 	wfx.nSamplesPerSec = sample_rate; /* sample rate */
-	wfx.wBitsPerSample = sample_size*8; /* sample size */
+	wfx.wBitsPerSample = channels *8; /* sample size */
 	wfx.nChannels = channels; /* channels*/
 	wfx.cbSize = 0; /* size of _extra_ info */
 	wfx.wFormatTag = WAVE_FORMAT_PCM;
 	wfx.nBlockAlign = (wfx.wBitsPerSample * wfx.nChannels) >> 3;
-	wfx.nAvgBytesPerSec = wfx.nBlockAlign * wfx.nSamplesPerSec;
+	wfx.nAvgBytesPerSec = bytes_persec;
 	/*
 	* try to open the default wave device. WAVE_MAPPER is
 	* a constant defined in mmsystem.h, it always points to the
