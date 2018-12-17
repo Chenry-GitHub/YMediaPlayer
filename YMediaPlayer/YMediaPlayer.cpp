@@ -9,8 +9,7 @@
 
 
 YMediaPlayer::YMediaPlayer()
-	:play_thread_(PlayThread,this)
-	, call_back_(nullptr)
+	: call_back_(nullptr)
 {
 	
 }
@@ -35,8 +34,10 @@ bool YMediaPlayer::SetMedia(const std::string & path_file)
 
 bool YMediaPlayer::Play()
 {
-	if (play_thread_.joinable())
+	if (!play_thread_.native_handle())
 	{
+		std::thread th(PlayThread,this);
+		play_thread_.swap(th);
 		play_thread_.detach();
 		return true;
 	}
@@ -68,12 +69,15 @@ void YMediaPlayer::PlayThread(YMediaPlayer* player)
 void YMediaPlayer::DoPlay()
 {
 	std::lock_guard<std::mutex> lg(g_audio_player_mutex);
+
+	is_terminate_ = false;
+	
 	av_register_all();
 
 	WavPlayer wav_player;
 
 	FormatCtx format;
-	if (format.InitFormatCtx(path_file_.c_str()))
+	if (!format.InitFormatCtx(path_file_.c_str()))
 	{
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, 0)
@@ -82,15 +86,15 @@ void YMediaPlayer::DoPlay()
 
 
 	CodecCtx audio_ctx(format.ctx_, AVMEDIA_TYPE_AUDIO);
-	if (audio_ctx.InitDecoder())
+	if (!audio_ctx.InitDecoder())
 	{
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, 0)
-			return;
+		return;
 	}
 
-	CodecCtx video_ctx(format.ctx_, AVMEDIA_TYPE_AUDIO);
-	if (video_ctx.InitDecoder())
+	CodecCtx video_ctx(format.ctx_, AVMEDIA_TYPE_VIDEO);
+	if (!video_ctx.InitDecoder())
 	{
 	
 	}

@@ -102,6 +102,7 @@ struct FormatCtx {
 		{
 			return false;
 		}
+		return true;
 	}
 
 
