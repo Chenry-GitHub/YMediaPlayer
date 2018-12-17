@@ -123,6 +123,7 @@ struct FormatCtx {
 struct CodecCtx {
 	inline CodecCtx(AVFormatContext * format_ctx, AVMediaType type)//AVMEDIA_TYPE_AUDIO
 		:format_(format_ctx)
+		, codec_ctx_(nullptr)
 		, type_(type)
 	{
 
@@ -130,7 +131,10 @@ struct CodecCtx {
 
 	~CodecCtx()
 	{
-		avcodec_free_context(&codec_ctx_);
+		if (codec_ctx_)
+		{
+			avcodec_free_context(&codec_ctx_);
+		}
 	}
 
 	bool InitDecoder()

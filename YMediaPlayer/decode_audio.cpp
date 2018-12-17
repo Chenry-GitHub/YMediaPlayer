@@ -305,7 +305,7 @@ int main(int argc, char **argv)
 int main(int argc, char* argv[])
 {
 	YMediaPlayer player;
-	player.SetMedia("C:/audio.mp3");
+	player.SetMedia("C:/mozart.mp3");
 	player.Play();
 	Sleep(100000000000);
 	return 0;

@@ -1,11 +1,8 @@
 #include "YMediaPlayer.h"
 
-#define AUDIO_INBUF_SIZE 20480
-#define AUDIO_REFILL_THRESH 4096
+
 #define AUDIO_OUT_SAMPLE_RATE 44100
-#define MAX_AUDIO_FRAME_SIZE 192000 
-
-
+#define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/
 
 
 YMediaPlayer::YMediaPlayer()
@@ -86,7 +83,7 @@ void YMediaPlayer::DoPlay()
 
 
 	CodecCtx audio_ctx(format.ctx_, AVMEDIA_TYPE_AUDIO);
-	if (!audio_ctx.InitDecoder())
+ 	if (!audio_ctx.InitDecoder())
 	{
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, 0)
@@ -114,7 +111,7 @@ void YMediaPlayer::DoPlay()
 		}
 		else if (format.pkg_->stream_index == video_ctx.stream_index_)
 		{
-			//	printf("video_stream :%d %d %d\n",bytes_persample, formatCtx_.pkg_.pos, formatCtx_.pkg_.size);
+			
 		}
 		format.release_package();
 	}
