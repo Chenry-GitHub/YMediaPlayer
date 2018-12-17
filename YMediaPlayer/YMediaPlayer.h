@@ -11,6 +11,8 @@ extern "C"
 {
 #include <libavutil/frame.h>
 #include <libavutil/mem.h>
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswresample/swresample.h>
@@ -60,6 +62,8 @@ protected:
 	void DoPlay();
 
 	void DecodeAudio(WavPlayer *player , FormatCtx* format_ctx, CodecCtx * codec_ctx ,AVFrame *frame, int out_sample_size);
+
+	void DecodeVideo(HWND hwnd, FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
 
 private:
 

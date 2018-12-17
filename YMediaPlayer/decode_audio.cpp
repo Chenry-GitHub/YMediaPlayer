@@ -301,13 +301,21 @@ int main(int argc, char **argv)
 #include <string.h>
 #include <Windows.h>
 #include "YMediaPlayer.h"
+void call_back()
+{
+
+}
+
 
 int main(int argc, char* argv[])
 {
 	YMediaPlayer player;
-	player.SetMedia("C:/mozart.mp3");
+	player.SetMedia("C:/video.mp4");
 	player.Play();
-	Sleep(100000000000);
+	
+
+	system("pause");
+	player.Stop();
 	return 0;
 }
 

@@ -1,8 +1,60 @@
-#include "YMediaPlayer.h"
+﻿#include "YMediaPlayer.h"
 
 
 #define AUDIO_OUT_SAMPLE_RATE 44100
 #define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/
+
+
+
+void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
+{
+	if (data == NULL)
+		return;
+
+	static BITMAPINFO *bitMapinfo = NULL;
+	static bool First = TRUE;
+
+	if (First)
+	{
+		BYTE*m_bitBuffer = new BYTE[40 + 4 * 256];//开辟一个内存区域  
+
+		if (m_bitBuffer == NULL)
+		{
+			return;
+		}
+		First = FALSE;
+		memset(m_bitBuffer, 0, 40 + 4 * 256);
+		bitMapinfo = (BITMAPINFO *)m_bitBuffer;
+		bitMapinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+		bitMapinfo->bmiHeader.biPlanes = 1;
+		for (int i = 0; i < 256; i++)
+		{ //颜色的取值范围 (0-255)  
+			bitMapinfo->bmiColors[i].rgbBlue = bitMapinfo->bmiColors[i].rgbGreen = bitMapinfo->bmiColors[i].rgbRed = (BYTE)i;
+		}
+	}
+	bitMapinfo->bmiHeader.biHeight = -height;
+	bitMapinfo->bmiHeader.biWidth = width;
+	bitMapinfo->bmiHeader.biBitCount = 3 * 8;
+	RECT drect;
+	GetClientRect(hWnd, &drect);    //pWnd指向CWnd类的一个指针   
+	HDC hDC = GetDC(hWnd);     //HDC是Windows的一种数据类型，是设备描述句柄；  
+	SetStretchBltMode(hDC, COLORONCOLOR);
+	StretchDIBits(hDC,
+		0,
+		0,
+		drect.right,   //显示窗口宽度  
+		drect.bottom,  //显示窗口高度  
+		0,
+		0,
+		width,      //图像宽度  
+		height,      //图像高度  
+		data,
+		bitMapinfo,
+		DIB_RGB_COLORS,
+		SRCCOPY
+	);
+	ReleaseDC(hWnd, hDC);
+}
 
 
 YMediaPlayer::YMediaPlayer()
@@ -91,9 +143,9 @@ void YMediaPlayer::DoPlay()
 	}
 
 	CodecCtx video_ctx(format.ctx_, AVMEDIA_TYPE_VIDEO);
-	if (!video_ctx.InitDecoder())
+	if (video_ctx.InitDecoder())
 	{
-	
+		
 	}
 
 	int out_channel = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
@@ -111,7 +163,7 @@ void YMediaPlayer::DoPlay()
 		}
 		else if (format.pkg_->stream_index == video_ctx.stream_index_)
 		{
-			
+			DecodeVideo(GetDesktopWindow(),&format,&video_ctx,decoded_frame);
 		}
 		format.release_package();
 	}
@@ -164,4 +216,36 @@ void YMediaPlayer::DecodeAudio(WavPlayer *wav_player ,FormatCtx* format_ctx, Cod
 		wav_player->AddBuff((char*)out_buffer, out_sample_size);
 
 	}
+}
+
+void YMediaPlayer::DecodeVideo(HWND hwnd, FormatCtx* format_ctx, CodecCtx * codec_ctx,AVFrame *frame)
+{
+	struct SwsContext *img_convert_ctx;
+
+	AVFrame *pFrameYUV = av_frame_alloc();
+	img_convert_ctx = sws_getContext(codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, codec_ctx->codec_ctx_->pix_fmt,
+		codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+	unsigned char *out_buffer = (unsigned char *)av_malloc(av_image_get_buffer_size(AV_PIX_FMT_YUV420P, codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, 1));
+	av_image_fill_arrays(pFrameYUV->data, pFrameYUV->linesize, out_buffer,
+		AV_PIX_FMT_YUV420P, codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, 1);
+
+
+	int ret = avcodec_send_packet(codec_ctx->codec_ctx_, format_ctx->pkg_);
+	if (ret != 0)
+	{
+		return;
+	}
+		
+	while ((ret = avcodec_receive_frame(codec_ctx->codec_ctx_, frame)) == 0)
+	{
+		sws_scale(img_convert_ctx, (const unsigned char* const*)frame->data, frame->linesize, 0, codec_ctx->codec_ctx_->height,
+			pFrameYUV->data, pFrameYUV->linesize);
+
+		ShowRGBToWnd(hwnd, pFrameYUV->data[0], codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height);
+
+	}
+
+	sws_freeContext(img_convert_ctx);
+	av_frame_free(&pFrameYUV);
+
 }
