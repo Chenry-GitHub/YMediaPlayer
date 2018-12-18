@@ -65,7 +65,7 @@ YMediaPlayer::YMediaPlayer()
 
 YMediaPlayer::~YMediaPlayer()
 {
-
+	Stop();
 }
 
 void YMediaPlayer::SetPlayerCallBack(Player_CallBack call_back)

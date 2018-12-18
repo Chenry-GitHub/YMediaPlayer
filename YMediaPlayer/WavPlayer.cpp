@@ -4,7 +4,6 @@
 #include <stdio.h>
 #pragma comment(lib,"winmm.lib")
 
-CRITICAL_SECTION g_waveCriticalSection;
 
 #define BLOCK_SIZE 8192
 #define BLOCK_COUNT 20
@@ -95,9 +94,9 @@ void WavPlayer::AddBuff(char *buff, int buff_size)
 		current->dwBufferLength = BLOCK_SIZE;
 		waveOutPrepareHeader(hWaveOut_, current, sizeof(WAVEHDR));
 		waveOutWrite(hWaveOut_, current, sizeof(WAVEHDR));
-		EnterCriticalSection(&g_waveCriticalSection);
+
 		waveFreeBlockCount_--;
-		LeaveCriticalSection(&g_waveCriticalSection);
+
 		/*
 		* wait for a block to become free
 		*/
@@ -133,7 +132,7 @@ WavPlayer::~WavPlayer()
 
 			waveOutUnprepareHeader(hWaveOut_, &waveBlocks_[i], sizeof(WAVEHDR));
 
-	DeleteCriticalSection(&g_waveCriticalSection);
+
 	freeBlocks(waveBlocks_);
 	waveOutClose(hWaveOut_);
 
@@ -149,7 +148,7 @@ bool WavPlayer::InitPlayer(int sample_rate,int channels, int bytes_persec)
 	waveBlocks_ = allocateBlocks(BLOCK_SIZE, BLOCK_COUNT);
 	waveFreeBlockCount_ = BLOCK_COUNT;
 	waveCurrentBlock_ = 0;
-	InitializeCriticalSection(&g_waveCriticalSection);
+
 	/*
 	* set up the WAVEFORMATEX structure.
 	*/
@@ -205,8 +204,6 @@ void CALLBACK WavPlayer::waveOutProc(
 
 		return;
 
-	EnterCriticalSection(&g_waveCriticalSection);
 	(*freeBlockCounter)++;
-	LeaveCriticalSection(&g_waveCriticalSection);
 
 }

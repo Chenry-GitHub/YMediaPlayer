@@ -310,12 +310,15 @@ void call_back()
 int main(int argc, char* argv[])
 {
 	YMediaPlayer player;
-	player.SetMedia("C:/video.mp4");
+	player.SetMedia("C:/audio.mp3");
 	player.Play();
 	
 
 	system("pause");
 	player.Stop();
+
+	player.Play();
+	system("pause");
 	return 0;
 }
 

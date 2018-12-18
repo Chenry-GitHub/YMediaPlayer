@@ -1,6 +1,7 @@
 #pragma once
 
 #include <windows.h>
+#include <atomic>
 
 class WavPlayer
 {
@@ -38,7 +39,7 @@ private:
 
 	WAVEHDR* waveBlocks_;
 
-	volatile int waveFreeBlockCount_;
+	std::atomic_int waveFreeBlockCount_;
 
 	int waveCurrentBlock_;
 
