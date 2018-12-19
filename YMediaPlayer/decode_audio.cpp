@@ -301,13 +301,13 @@ int main(int argc, char* argv[])
 {
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer *player=new YMediaPlayer;
-	player->SetMediaFromFile("C:/audio2.mp3");
+	player->SetMediaFromFile("C:/audio.mp3");
 	player->Play();
 	
 	system("pause");
 	player->Stop();
 
-	player->SetMediaFromFile("C:/audio5d.mp3");
+	player->SetMediaFromFile("C:/music.mp3");
 	player->Play();
 	system("pause");
 	delete player;

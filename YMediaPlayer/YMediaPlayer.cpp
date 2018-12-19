@@ -58,9 +58,6 @@ int YMediaPlayer::UnInitPlayer()
 	alcDestroyContext(pCurContext);
 	alcCloseDevice(pCurDevice);
 
-	if (alcGetError(pCurDevice) != ALC_NO_ERROR)
-		return AL_FALSE;
-
 	return AL_TRUE;
 }
 
