@@ -1,6 +1,5 @@
 #include "YMediaDecode.h"
 #include "WavPlayer.h"
-#include "WavPlayerOpenAlWarpper.h"
 
 #define AUDIO_OUT_SAMPLE_RATE 44100
 #define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/

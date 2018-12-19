@@ -294,31 +294,23 @@ int main(int argc, char **argv)
 * Version 2.0
 */
 
-#include "WavPlayer.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <Windows.h>
 #include "YMediaPlayer.h"
-void call_back()
-{
-
-}
 
 
 int main(int argc, char* argv[])
 {
+	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
-	player.SetMedia("C:/audio.mp3");
+	player.SetMediaFromFile("C:/audio2.mp3");
 	player.Play();
 	
-
 	system("pause");
 	player.Stop();
 
 	player.Play();
 	system("pause");
+
+	YMediaPlayer::UnInitPlayer();
 	return 0;
 }
 

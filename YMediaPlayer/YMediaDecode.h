@@ -18,7 +18,7 @@ extern "C"
 #include <libavcodec/avcodec.h>
 #include <libswresample/swresample.h>
 }
-#include "WavPlayerInterface.h"
+
 #include "ThreadSafe_Queue.h"
 
 
