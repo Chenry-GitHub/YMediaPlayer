@@ -300,15 +300,17 @@ int main(int argc, char **argv)
 int main(int argc, char* argv[])
 {
 	YMediaPlayer::InitPlayer();
-	YMediaPlayer player;
-	player.SetMediaFromFile("C:/audio2.mp3");
-	player.Play();
+	YMediaPlayer *player=new YMediaPlayer;
+	player->SetMediaFromFile("C:/audio2.mp3");
+	player->Play();
 	
 	system("pause");
-	player.Stop();
+	player->Stop();
 
-	player.Play();
+	player->SetMediaFromFile("C:/audio5d.mp3");
+	player->Play();
 	system("pause");
+	delete player;
 
 	YMediaPlayer::UnInitPlayer();
 	return 0;
