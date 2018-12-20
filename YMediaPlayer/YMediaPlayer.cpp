@@ -21,7 +21,7 @@ YMediaPlayer::YMediaPlayer()
 
 	alGenBuffers(NUMBUFFERS, audio_buf_);
 
-	decoder_ptr_ = make_unique<YMediaDecode*>(new YMediaDecode());
+	Stop();
 }
 
 YMediaPlayer::~YMediaPlayer()
@@ -67,12 +67,11 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 
 	path_file_ = path_file;
 
-	(*decoder_ptr_)->SetMedia(path_file);
+	decoder_.SetMedia(path_file);
 
 	std::thread th(&YMediaPlayer::PlayThread, this);
 	play_thread_.swap(th);
 
-	
 	return true;
 }
 
@@ -80,21 +79,27 @@ bool YMediaPlayer::Play()
 {
 	int state;
 	alGetSourcei(source_id_, AL_SOURCE_STATE, &state);
-	if (state == AL_STOPPED || state == AL_INITIAL)
+	if (state == AL_STOPPED || state == AL_INITIAL || state == AL_PAUSED)
 	{
+		is_pause_ = false;
 		alSourcePlay(source_id_);
 	}
+	//alSourcePlay(source_id_);
+	//is_pause_ = false;
 	return true;
 }
 
 bool YMediaPlayer::Pause()
 {
+//	alSourcePause(source_id_);
+	is_pause_ = true;
 	return true;
 }
 
 bool YMediaPlayer::Stop()
 {
 	is_need_stop_ = true;
+	is_pause_ = true;
 
 	alSourceStop(source_id_);
 	alSourcei(source_id_, AL_BUFFER, 0);
@@ -104,57 +109,65 @@ bool YMediaPlayer::Stop()
 		play_thread_.join(); //next time !block here!
 	}
 
-	(*decoder_ptr_)->StopDecode();
+	decoder_.StopDecode();
 
 	return true;
 }
 
+bool YMediaPlayer::IsPause()
+{
+	/*int state;
+	alGetSourcei(source_id_, AL_SOURCE_STATE, &state);
+	if (state == AL_PAUSED)
+	{
+		return true;
+	}
+	return false;*/
+	return is_pause_;
+}
+
 void YMediaPlayer::FillAudioBuff(ALuint& buf_id)
 {
-	PackageInfo info= (*decoder_ptr_)->PopAudioQue();
+	PackageInfo info= decoder_.PopAudioQue();
 	if (info .size <= 0)
 		return ;
 	ALenum fmt;
 	alBufferData(buf_id, AL_FORMAT_STEREO16, info.data, info.size, info.sample_rate);
 	alSourceQueueBuffers(source_id_, 1, &buf_id);
-	(*decoder_ptr_)->ReleasePackageInfo(&info);
+	decoder_.ReleasePackageInfo(&info);
 }
 
 int YMediaPlayer::PlayThread()
 {
-	//is_need_stop_ = false;
-
-	//while (! is_need_stop_ )
-	//{
-	//	std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	//	
-	//}
-	//printf("PlayThread Safely quit!\n");
-	//get frame
-
 	is_need_stop_ = false;
+	//first time ,need to fill the Source
 	for (int i = 0; i < NUMBUFFERS; i++)
 	{
 		FillAudioBuff(audio_buf_[i]);
 	}
-	Play();
 
-	//
-	while (false == is_need_stop_)
+	while ( false == is_need_stop_)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+		if (IsPause())
+		{
+			continue;
+		}
+		else
+		{
+			Play();
+		}
+
 		ALint processed = 0;
 		alGetSourcei(source_id_, AL_BUFFERS_PROCESSED, &processed);
-		//printf("the processed is:%d\n", processed);
-		while (processed > 0)
+		while (processed--)
 		{
 			ALuint bufferID = 0;
 			alSourceUnqueueBuffers(source_id_, 1, &bufferID);
 			printf("bufferID:%d\n", bufferID);
 			FillAudioBuff(bufferID);
-			processed--;
 		}
-		Play();
 	}
 
 

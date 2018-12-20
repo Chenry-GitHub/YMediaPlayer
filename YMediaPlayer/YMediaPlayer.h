@@ -16,7 +16,7 @@
 #include "YMediaDecode.h"
 
 #define NUMBUFFERS              8
-
+ 
 class YMediaPlayer
 {
 public:
@@ -35,6 +35,7 @@ public:
 
 	bool Stop();
 
+	bool IsPause();
 
 	void FillAudioBuff(ALuint& buf);
 protected:
@@ -45,11 +46,13 @@ private:
 	std::string path_file_;
 	ALuint		source_id_;
 
-	std::unique_ptr<YMediaDecode *> decoder_ptr_;
+	YMediaDecode  decoder_;
 
 	std::thread play_thread_;
 
 	atomic_bool is_need_stop_;
+
+	atomic_bool is_pause_;
 
 	ALuint audio_buf_[NUMBUFFERS];
 };

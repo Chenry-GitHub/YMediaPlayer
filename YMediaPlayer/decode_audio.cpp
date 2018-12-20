@@ -302,13 +302,24 @@ int main(int argc, char* argv[])
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer *player=new YMediaPlayer;
 	player->SetMediaFromFile("C:/audio.mp3");
+//	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	player->Play();
-	
+	//std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	//player->Pause();
+	while (true)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		player->Pause();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		player->Play();
+	}
 	system("pause");
-	player->Stop();
-
-	player->SetMediaFromFile("C:/music.mp3");
+	player->Pause();
+	system("pause");
 	player->Play();
+
+	//player->SetMediaFromFile("C:/audio5d.mp3");
+	//player->Play();
 	system("pause");
 	delete player;
 
