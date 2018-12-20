@@ -301,17 +301,22 @@ int main(int argc, char* argv[])
 {
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer *player=new YMediaPlayer;
-	player->SetMediaFromFile("C:/audio.mp3");
-//	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	player->SetMediaFromFile("C:/audio2.mp3");
+
 	player->Play();
-	//std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	//player->Pause();
+
+//	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//	player->Play();
+//	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//	player->Pause();
+//	player->SetMediaFromFile("C:/audio5d.mp3");
+//	player->Play();
+//player->Play();
 	while (true)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		player->Pause();
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		player->Play();
+//		player->SetMediaFromFile("C:/audio2.mp3");
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 	system("pause");
 	player->Pause();

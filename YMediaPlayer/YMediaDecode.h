@@ -29,22 +29,27 @@ enum YMediaCallBackType
 	MEDIA_ERROR,
 };
 
-struct PackageInfo
-{
-	void *data;
-	int size;
-	int sample_rate;
-	int channels;
-};
+
 
 
 
 enum YMediaPlayerError
 {
 	ERROR_NO_ERROR = 0,
+	ERROR_NO_QUIT,
 	ERROR_FILE_ERROR,
-
+	
 };
+
+struct PackageInfo
+{
+	void *data;
+	int size = 0;
+	int sample_rate;
+	int channels;
+	YMediaPlayerError error = ERROR_NO_ERROR;
+};
+
 
 using Player_CallBack = void(*) (LPARAM lp, WPARAM wp);
 
@@ -71,6 +76,8 @@ public:
 	void EmptyAudioQue();
 
 	PackageInfo PopAudioQue();
+	
+	void PushAudioQue(void *data,int size,int sample_rate,int channel, YMediaPlayerError error);
 
 	void ReleasePackageInfo(PackageInfo*);
 protected:

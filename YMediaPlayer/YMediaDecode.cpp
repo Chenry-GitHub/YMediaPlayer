@@ -100,8 +100,7 @@ bool YMediaDecode::StopDecode()
 
 bool YMediaDecode::StartDecode()
 {
-	std::thread th(&YMediaDecode::DecodecThread, this);
-	decodec_thread_.swap(th);
+	decodec_thread_ = std::move(std::thread(&YMediaDecode::DecodecThread, this));
 	return true;
 }
 
@@ -126,6 +125,17 @@ PackageInfo YMediaDecode::PopAudioQue()
 	return info;
 }
 
+void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, YMediaPlayerError error)
+{
+	PackageInfo info;
+	info.data = data;
+	info.size = size;
+	info.sample_rate = sample_rate;
+	info.channels = channel;
+	info.error = error;
+	audio_que_.push(info);
+}
+
 void YMediaDecode::ReleasePackageInfo(PackageInfo*info)
 {
 	if (info->size > 0)
@@ -136,14 +146,13 @@ void YMediaDecode::DecodecThread()
 {
 	is_need_stop_ = false;
 
-	av_register_all();
-
-
 	FormatCtx format;
 	if (!format.InitFormatCtx(path_file_.c_str()))
 	{
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
+		printf("InitFormatCtx Error\n");
+		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, ERROR_FILE_ERROR);
 		return;
 	}
 
@@ -153,15 +162,17 @@ void YMediaDecode::DecodecThread()
 	{
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
+		printf("audio_ctx.InitDecoder Error\n");
+		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, ERROR_NO_QUIT);
 		return;
 	}
 
 	CodecCtx video_ctx(format.ctx_, AVMEDIA_TYPE_VIDEO);
-	if (video_ctx.InitDecoder())
+	if (!video_ctx.InitDecoder())
 	{
-
+		printf("video_ctx.InitDecoder Error\n");
 	}
-	
+
 	AVFrame *decoded_frame = av_frame_alloc();
 	while (!is_need_stop_)
 	{
@@ -173,6 +184,7 @@ void YMediaDecode::DecodecThread()
 
 		if (!format.read())
 		{
+			printf("format.read() Error\n");
 			break;
 		}
 
@@ -196,7 +208,7 @@ void YMediaDecode::DecodecThread()
 	}
 	av_frame_free(&decoded_frame);
 
-	EmptyAudioQue();
+	printf("YMediaDecode quit\n");
 }
 
 
@@ -230,16 +242,12 @@ void YMediaDecode::DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 		int Audiobuffer_size = av_samples_get_buffer_size(NULL,
 			AUDIO_OUT_CHANNEL, out_samples, AV_SAMPLE_FMT_S16, 1);
 
-		printf("audio_stream :%d %d %d %d--size\n", frame->nb_samples, Audiobuffer_size, format_ctx->pkg_->pts, format_ctx->pkg_->size);
+		//printf("audio_stream :%d %d %d %d--size\n", frame->nb_samples, Audiobuffer_size, format_ctx->pkg_->pts, format_ctx->pkg_->size);
 
 		void * data = av_malloc(Audiobuffer_size);
 		memcpy_s(data, Audiobuffer_size, out_buffer, Audiobuffer_size);
-		PackageInfo info;
-		info.data = data;
-		info.size = Audiobuffer_size;
-		info.sample_rate = AUDIO_OUT_SAMPLE_RATE;
-		info.channels = AUDIO_OUT_CHANNEL;
-		audio_que_.push(info);
+		//push to media player
+		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,ERROR_NO_ERROR);
 	}
 
 	av_free(out_buffer);

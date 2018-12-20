@@ -3,6 +3,8 @@
 @brief:Player was  developed which based on OpenAV 
 @author:yantao
 @time:2018-12-19 13:29:48
+@details: 使用AudioQue为我们的主要解码控制，如果音频队列是一个消费者-生产者模型，出队了，音频再继续入队解码，音频解码线程会被阻塞住，
+这样存在一个问题，在播放层消费的时候，如果没有生产者，播放线程会一直卡住，解决方法就是解码出错了也要push队列，通知上层继续执行。
 */
 #include <al.h>
 #include <alc.h>
@@ -37,7 +39,7 @@ public:
 
 	bool IsPause();
 
-	void FillAudioBuff(ALuint& buf);
+	YMediaPlayerError FillAudioBuff(ALuint& buf);
 protected:
 	int  PlayThread();
 
@@ -55,4 +57,7 @@ private:
 	atomic_bool is_pause_;
 
 	ALuint audio_buf_[NUMBUFFERS];
+
+	//
+	//
 };
