@@ -99,17 +99,18 @@ bool YMediaPlayer::Pause()
 
 bool YMediaPlayer::Stop()
 {
+	is_need_stop_ = true;
+	is_pause_ = true;
+
+	alSourceStop(source_id_);
+	alSourcei(source_id_, AL_BUFFER, 0);
+
 	if (play_thread_.joinable())
 	{
-		is_need_stop_ = true;
-		is_pause_ = true;
-
-		alSourceStop(source_id_);
-		alSourcei(source_id_, AL_BUFFER, 0);
-		decoder_.StopDecode();
-
 		play_thread_.join(); //next time !block here!
 	}
+
+	decoder_.StopDecode();
 	return true;
 }
 
