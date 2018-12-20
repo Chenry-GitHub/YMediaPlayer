@@ -21,7 +21,7 @@ YMediaPlayer::YMediaPlayer()
 
 	alGenBuffers(NUMBUFFERS, audio_buf_);
 
-	Pause();
+	Stop();
 }
 
 YMediaPlayer::~YMediaPlayer()
@@ -73,6 +73,11 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 
 	play_thread_ = std::move(std::thread(&YMediaPlayer::PlayThread, this));
 
+	while (!is_prepare_)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+
 	printf("SetMediaFromFile\n");
 	return true;
 }
@@ -99,6 +104,7 @@ bool YMediaPlayer::Pause()
 
 bool YMediaPlayer::Stop()
 {
+	is_prepare_ = false;
 	is_need_stop_ = true;
 	is_pause_ = true;
 
@@ -134,6 +140,7 @@ YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 
 int YMediaPlayer::PlayThread()
 {
+	is_need_stop_ = false;
 	//first time ,need to fill the Source
 	for (int i = 0; i < NUMBUFFERS; i++)
 	{
@@ -143,6 +150,8 @@ int YMediaPlayer::PlayThread()
 			break;
 		}
 	}
+
+	is_prepare_ = true;
 
 	while ( false == is_need_stop_)
 	{
@@ -170,16 +179,5 @@ int YMediaPlayer::PlayThread()
 			}
 		}
 	}
-
-
-	//while (true)
-	//{
-	//	//GetValue
-
-	//	//Play Value
-	//}
-
-
-	//printf("PlayThread Quit:%d\n", this_thread::get_id());
 	return true;
 }

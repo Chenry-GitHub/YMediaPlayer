@@ -312,12 +312,12 @@ int main(int argc, char* argv[])
 //	player->SetMediaFromFile("C:/audio5d.mp3");
 //	player->Play();
 //player->Play();
-	while (true)
-	{
-//		player->SetMediaFromFile("C:/audio2.mp3");
+	//while (true)
+	//{
+	////	player->SetMediaFromFile("C:/audio2.mp3");
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
+	//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	//}
 	system("pause");
 	player->Pause();
 	system("pause");

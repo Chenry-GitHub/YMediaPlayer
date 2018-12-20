@@ -58,6 +58,7 @@ private:
 
 	ALuint audio_buf_[NUMBUFFERS];
 
-	//
+	//为第一次执行
+	atomic_bool is_prepare_;
 	//
 };
