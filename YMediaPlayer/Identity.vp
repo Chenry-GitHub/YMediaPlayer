@@ -1,0 +1,15 @@
+// The TexturedIdentity Shader
+// Vertex Shader
+// Richard S. Wright Jr.
+// OpenGL SuperBible
+#version 330
+layout (location = 0) in vec4 vVertex;
+layout (location = 1) in vec2 vTexCoords;
+
+smooth out vec2 vVaryingTexCoords;
+
+void main(void)
+{
+    vVaryingTexCoords = vec2(vTexCoords.x,1.0-vTexCoords.y);
+    gl_Position = vVertex;
+}

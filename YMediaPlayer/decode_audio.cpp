@@ -37,11 +37,12 @@ int main(int argc, _TCHAR* argv[])
 	// Define the viewport dimensions
 	glViewport(0, 0, WIDTH, HEIGHT);
 
-	wglMakeCurrent(NULL, NULL);
+
+	glfwMakeContextCurrent(NULL);
 
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
-	player.SetMediaFromFile("D:/video3.mp4");
+	player.SetMediaFromFile("D:/video2.mp4");
 	player.Play();
 
 						  // Game loop

@@ -226,10 +226,7 @@ void YMediaDecode::DecodecThread()
 		m_pSwsCtx = sws_getContext(video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, video_ctx.codec_ctx_->pix_fmt, video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL);
 	
 	
-		//shader_ptr_ = new Shader("C:/vert.shr", "C:/frame.shr");
-		//shader_ptr_->Use();
-	
-	
+		glfwMakeContextCurrent(g_hwnd);
 
 
 		glGenVertexArrays(1, &vao);
@@ -280,8 +277,7 @@ void YMediaDecode::DecodecThread()
 
 		glLinkProgram(program);
 
-		auto hglrc = wglCreateContext(GetDC((HWND)g_hwnd));
-		wglMakeCurrent(GetDC((HWND)g_hwnd), hglrc);
+
 	}
 
 	AVFrame *decoded_frame = av_frame_alloc();
@@ -488,10 +484,10 @@ void YMediaDecode::DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 			glTexImage2D(GL_TEXTURE_2D, 0,
 				GL_RGB,
 				codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, 0,
-				GL_RGB, GL_UNSIGNED_BYTE, m_pFrameRGB->data);
+				GL_RGB, GL_UNSIGNED_BYTE, m_pFrameRGB->data[0]);
 	
 
-			glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
+			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 			GLuint sampler_location;
