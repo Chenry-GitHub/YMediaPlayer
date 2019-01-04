@@ -130,6 +130,7 @@ YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 	PackageInfo info= decoder_.PopAudioQue();
 	if (info .size <= 0 || info.error  != ERROR_NO_ERROR)
 		return info.error;
+	printf("package pts:%d\n",info.pts);
 	ALenum fmt;
 	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, info.sample_rate);
 	alSourceQueueBuffers(source_id_, 1, &buf);
@@ -172,7 +173,7 @@ int YMediaPlayer::PlayThread()
 		{
 			ALuint bufferID = 0;
 			alSourceUnqueueBuffers(source_id_, 1, &bufferID);
-			printf("bufferID:%d\n", bufferID);
+			//printf("bufferID:%d\n", bufferID);
 			if (YMediaPlayerError::ERROR_NO_ERROR != FillAudioBuff(bufferID))
 			{
 				break;

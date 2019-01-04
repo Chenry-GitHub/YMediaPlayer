@@ -16,7 +16,7 @@
 #include <atomic>
 
 #include "YMediaDecode.h"
-#include "Shader.h"
+//#include "Shader.h"
 
 #define NUMBUFFERS              8
  

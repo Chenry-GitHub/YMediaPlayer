@@ -42,7 +42,7 @@ int main(int argc, _TCHAR* argv[])
 
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
-	player.SetMediaFromFile("D:/video2.mp4");
+	player.SetMediaFromFile("C:\\video.mp4");
 	player.Play();
 
 						  // Game loop

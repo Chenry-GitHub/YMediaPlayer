@@ -23,10 +23,11 @@ extern "C"
 }
 
 #include "ThreadSafe_Queue.h"
-#include "Shader.h"
+#include <glew.h>
+//#include "Shader.h"
 
 
-#define  QUE_PACKAGEINFO_SIZE 20
+#define  QUE_PACKAGEINFO_SIZE 200
 
 enum YMediaCallBackType
 {
@@ -49,6 +50,11 @@ struct PackageInfo
 {
 	void *data;
 	int size = 0;
+	int width;
+	int height;
+	long long pts;
+	long long dur;
+	long long dts;
 	int sample_rate;
 	int channels;
 	YMediaPlayerError error = ERROR_NO_ERROR;
@@ -81,7 +87,7 @@ public:
 
 	PackageInfo PopAudioQue();
 	
-	void PushAudioQue(void *data,int size,int sample_rate,int channel, YMediaPlayerError error);
+	void PushAudioQue(void *data,int size,int sample_rate,int channel, long long dur, long long pts, YMediaPlayerError error);
 
 	void ReleasePackageInfo(PackageInfo*);
 protected:
@@ -92,6 +98,7 @@ protected:
 
 	void DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
 
+	void PlayVideoThread();
 private:
 
 	std::string path_file_;
@@ -105,6 +112,7 @@ private:
 	atomic_bool is_need_stop_;
 
 	ThreadSafe_Queue<PackageInfo> audio_que_;
+	ThreadSafe_Queue<PackageInfo> video_que_;
 
 	int m_PictureSize;
 
@@ -115,7 +123,7 @@ private:
 	struct SwsContext *m_pSwsCtx;
 	
 	///
-	Shader * shader_ptr_;
+	//Shader * shader_ptr_;
 	GLuint vao;
 	GLuint vert_buf;
 	GLuint elem_buf;

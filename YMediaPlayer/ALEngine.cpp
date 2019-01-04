@@ -164,6 +164,7 @@ int ALEngine::SoundPlayingThread()
 int ALEngine::SoundCallback(ALuint& bufferID)
 {
 	PTFRAME frame = m_decoder->GetFrame();
+	printf("CurrentPts:%d",frame->pts);
 	if (frame == nullptr)
 		return -1;
 	ALenum fmt;

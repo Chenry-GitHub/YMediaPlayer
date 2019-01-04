@@ -164,11 +164,13 @@ PackageInfo YMediaDecode::PopAudioQue()
 	return info;
 }
 
-void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, YMediaPlayerError error)
+void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, long long dur, long long pts, YMediaPlayerError error)
 {
 	PackageInfo info;
 	info.data = data;
 	info.size = size;
+	info.dur = dur;
+	info.pts = pts;
 	info.sample_rate = sample_rate;
 	info.channels = channel;
 	info.error = error;
@@ -191,7 +193,7 @@ void YMediaDecode::DecodecThread()
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("InitFormatCtx Error\n");
-		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, ERROR_FILE_ERROR);
+		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,ERROR_FILE_ERROR);
 		return;
 	}
 
@@ -202,7 +204,7 @@ void YMediaDecode::DecodecThread()
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("audio_ctx.InitDecoder Error\n");
-		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, ERROR_NO_QUIT);
+		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,ERROR_NO_QUIT);
 		return;
 	}
 
@@ -225,69 +227,18 @@ void YMediaDecode::DecodecThread()
 		avpicture_fill((AVPicture *)m_pFrameRGB, m_buf, AV_PIX_FMT_BGR24, video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height);
 		m_pSwsCtx = sws_getContext(video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, video_ctx.codec_ctx_->pix_fmt, video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL);
 	
-	
-		glfwMakeContextCurrent(g_hwnd);
 
-
-		glGenVertexArrays(1, &vao);
-		glBindVertexArray(vao);
-
-		glGenBuffers(1, &vertex_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER,
-			4 * sizeof(GLfloat) * 3,
-			vertexArray, GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-		glEnableVertexAttribArray(0);
-
-		glGenBuffers(1, &texture_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, texture_buffer);
-		glBufferData(GL_ARRAY_BUFFER,
-			4 * sizeof(GLfloat) * 2,
-			texCoord, GL_STATIC_DRAW);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
-		glEnableVertexAttribArray(1);
-
-		//create map texture object
-		glGenTextures(1, &TextureID);
-		glBindTexture(GL_TEXTURE_2D, TextureID);
-		/* Setup some parameters for texture filters and mipmapping */
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-
-		vert_shader = glCreateShader(GL_VERTEX_SHADER);
-		frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-
-		gltLoadShaderFile("C:/Identity.vp", vert_shader);
-		gltLoadShaderFile("C:/Identity.fp", frag_shader);
-
-		glCompileShader(vert_shader);
-		glCompileShader(frag_shader);
-
-		program = glCreateProgram();
-
-		glAttachShader(program, vert_shader);
-		glAttachShader(program, frag_shader);
-
-		glLinkProgram(program);
-
-
+		static std::thread th= std::move(std::thread(&YMediaDecode::PlayVideoThread,this));
 	}
 
 	AVFrame *decoded_frame = av_frame_alloc();
 	while (!is_need_stop_)
 	{
-		if (audio_que_.GetSize() > QUE_PACKAGEINFO_SIZE)  //控制好包的数量
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-			continue;
-		}
+		//if (audio_que_.GetSize() > QUE_PACKAGEINFO_SIZE)  //控制好包的数量
+		//{
+		//	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		//	continue;
+		//}
 
 		if (!format.read())
 		{
@@ -345,7 +296,7 @@ void YMediaDecode::DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 	/* read all the output frames (in general there may be any number of them */
 	while ((ret = avcodec_receive_frame(codec_ctx->codec_ctx_, frame)) == 0)
 	{
-		int dur = av_rescale_q(format_ctx->pkg_->duration, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });;
+		long long dur = av_rescale_q(format_ctx->pkg_->duration, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });;
 		int outSizeCandidate = AUDIO_OUT_SAMPLE_RATE * 8 *double(dur) / 1000000.0;
 		uint8_t *out_buffer = (uint8_t *)av_malloc(sizeof uint8_t *outSizeCandidate);
 		int out_samples =	swr_convert(au_convert_ctx, &out_buffer, outSizeCandidate, (const uint8_t **)&frame->data[0], frame->nb_samples);
@@ -359,8 +310,12 @@ void YMediaDecode::DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 
 		void * data = av_malloc(Audiobuffer_size);
 		memcpy_s(data, Audiobuffer_size, out_buffer, Audiobuffer_size);
+
+		
+		long long pts = av_rescale_q(format_ctx->pkg_->pts, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });
+
 		//push to media player
-		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,ERROR_NO_ERROR);
+		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur,pts,ERROR_NO_ERROR);
 		av_free(out_buffer);
 	}
 #else
@@ -480,12 +435,97 @@ void YMediaDecode::DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 		/*	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, codec_ctx->codec_ctx_->width,
 				codec_ctx->codec_ctx_->height, GL_RGB, GL_UNSIGNED_BYTE,
 				m_pFrameRGB->data[0]);*/
+			PackageInfo info;
+			info.data = m_pFrameRGB->data[0];
+			info.width = codec_ctx->codec_ctx_->width;
+			info.height = codec_ctx->codec_ctx_->height;
+
+			video_que_.push(info);
+			
+
+			//av_frame_unref(pFrame);
+		}
+	}
+
+}
+
+void YMediaDecode::PlayVideoThread()
+{
+	glfwMakeContextCurrent(g_hwnd);
+
+
+
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	glGenBuffers(1, &vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER,
+		4 * sizeof(GLfloat) * 3,
+		vertexArray, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+	glEnableVertexAttribArray(0);
+
+	glGenBuffers(1, &texture_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, texture_buffer);
+	glBufferData(GL_ARRAY_BUFFER,
+		4 * sizeof(GLfloat) * 2,
+		texCoord, GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
+	glEnableVertexAttribArray(1);
+
+	//create map texture object
+	glGenTextures(1, &TextureID);
+	glBindTexture(GL_TEXTURE_2D, TextureID);
+	/* Setup some parameters for texture filters and mipmapping */
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+
+	vert_shader = glCreateShader(GL_VERTEX_SHADER);
+	frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	gltLoadShaderFile("C:/Identity.vp", vert_shader);
+	gltLoadShaderFile("C:/Identity.fp", frag_shader);
+
+	glCompileShader(vert_shader);
+	glCompileShader(frag_shader);
+
+	program = glCreateProgram();
+
+	glAttachShader(program, vert_shader);
+	glAttachShader(program, frag_shader);
+
+	glLinkProgram(program);
+
+	//Sleep(5000);
+
+	while (true)
+	{//do play
+		//while (video_que_.GetSize() > 50)
+		//{
+		//	break;
+		//}
+		
+		while (video_que_.GetSize()>0)
+		{
+			PackageInfo info;
+			if (!video_que_.TryPop(info))
+			{
+				//Sleep(500);
+				continue;
+			}
 
 			glTexImage2D(GL_TEXTURE_2D, 0,
 				GL_RGB,
-				codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, 0,
-				GL_RGB, GL_UNSIGNED_BYTE, m_pFrameRGB->data[0]);
-	
+				info.width, info.height, 0,
+				GL_RGB, GL_UNSIGNED_BYTE, info.data);
+
 
 			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -504,8 +544,13 @@ void YMediaDecode::DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 
 			glfwSwapBuffers(g_hwnd);
 
-			av_frame_unref(pFrame);
 		}
+		
+			
+
+
+		
+//		Sleep(40);
 	}
 
 }
