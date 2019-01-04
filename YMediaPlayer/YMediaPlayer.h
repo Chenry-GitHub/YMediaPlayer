@@ -16,6 +16,7 @@
 #include <atomic>
 
 #include "YMediaDecode.h"
+#include "Shader.h"
 
 #define NUMBUFFERS              8
  
@@ -61,4 +62,6 @@ private:
 	//为第一次执行
 	atomic_bool is_prepare_;
 	//
+
+
 };

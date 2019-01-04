@@ -36,6 +36,15 @@
     <ClInclude Include="ThreadSafe_Queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ALEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="YMediaPlayer2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -51,6 +60,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="YMediaDecode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ALEngine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="YMediaPlayer2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

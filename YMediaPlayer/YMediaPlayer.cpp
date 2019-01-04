@@ -73,7 +73,7 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 
 	play_thread_ = std::move(std::thread(&YMediaPlayer::PlayThread, this));
 
-	while (!is_prepare_)
+	while (!is_prepare_)//wait for buffer file buff done!
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}

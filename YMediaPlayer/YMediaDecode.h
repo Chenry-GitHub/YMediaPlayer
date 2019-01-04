@@ -8,6 +8,9 @@ using namespace std;
 
 #include <windows.h>
 
+class GLFWwindow ;
+extern GLFWwindow  *g_hwnd;
+
 extern "C"
 {
 #include <libavutil/frame.h>
@@ -20,6 +23,7 @@ extern "C"
 }
 
 #include "ThreadSafe_Queue.h"
+#include "Shader.h"
 
 
 #define  QUE_PACKAGEINFO_SIZE 20
@@ -86,7 +90,7 @@ protected:
 
 	void DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
 
-	void DoDecodeVideo(HWND hwnd, FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
+	void DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
 
 private:
 
@@ -101,6 +105,25 @@ private:
 	atomic_bool is_need_stop_;
 
 	ThreadSafe_Queue<PackageInfo> audio_que_;
+
+	int m_PictureSize;
+
+	uint8_t* m_buf;
+
+	AVFrame *m_pFrameRGB;
+
+	struct SwsContext *m_pSwsCtx;
+	
+	///
+	Shader * shader_ptr_;
+	GLuint vao;
+	GLuint vert_buf;
+	GLuint elem_buf;
+	GLuint frame_tex;
+	GLuint program;
+	GLuint attribs[2];
+	GLuint uniforms[2];
+	///
 };
 
 
