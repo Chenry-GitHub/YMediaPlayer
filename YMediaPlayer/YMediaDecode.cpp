@@ -1,91 +1,11 @@
-#include "YMediaDecode.h"
+ï»¿#include "YMediaDecode.h"
 #include "WavPlayer.h"
 
-
-#include <glm.hpp>
-#include <ext.hpp>
-#include <glfw3.h>
-
-GLfloat vertexArray[12] = { -0.9f, -0.9f, 0.0f,
-0.9f, -0.9f, 0.0f,
-0.9f,  0.9f, 0.0f,
--0.9f,  0.9f, 0.0f };
-
-GLfloat texCoord[8] = { 0.0f, 0.0f,
-1.0f, 0.0f,
-1.0f, 1.0f,
-0.0f, 1.0f };         //ÓëjpgÍ¼Æ¬´æ´¢ÓÐ¹Ø£¬µ¹ÖÃµÄ
 
 #define AUDIO_OUT_SAMPLE_RATE 44100
 #define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/
 #define AUDIO_OUT_CHANNEL 2
 GLFWwindow  *g_hwnd;
- 
-GLuint vao;
-GLuint vertex_buffer;
-GLuint texture_buffer;
-GLuint TextureID;
-GLuint vert_shader, frag_shader;
-GLuint program;
-
-
-/************************************************************************************/
-#include <stdio.h>
-#include <assert.h>
-#define MAX_SHADER_LENGTH 8192
-#define MAX_TARGET_NUM  10
-
-GLchar shaderText[MAX_SHADER_LENGTH];
-
-void gltLoadShaderSrc(const char *szShaderSrc, GLuint shader)
-{
-	GLchar *fsStringPtr[1];
-
-	fsStringPtr[0] = (GLchar *)szShaderSrc;
-	glShaderSource(shader, 1, (const GLchar **)fsStringPtr, NULL);
-}
-
-bool gltLoadShaderFile(const char *szFile, GLuint shader)
-{
-	GLint shaderLength = 0;
-	FILE *fp;
-
-	// Open the shader file
-	fp = fopen(szFile, "r");
-	if (fp != NULL)
-	{
-		// See how long the file is
-		while (fgetc(fp) != EOF)
-			shaderLength++;
-
-		// Allocate a block of memory to send in the shader
-		assert(shaderLength < MAX_SHADER_LENGTH);   // make me bigger!
-		if (shaderLength > MAX_SHADER_LENGTH)
-		{
-			fclose(fp);
-			return false;
-		}
-
-		// Go back to beginning of file
-		rewind(fp);
-
-		// Read the whole file in
-		if (shaderText != NULL)
-			fread(shaderText, 1, shaderLength, fp);
-
-		// Make sure it is null terminated and close the file
-		shaderText[shaderLength] = '\0';
-		fclose(fp);
-	}
-	else
-		return false;
-
-	// Load the string
-	gltLoadShaderSrc((const char *)shaderText, shader);
-
-	return true;
-}
-
 
 
 
@@ -148,7 +68,7 @@ void YMediaDecode::EmptyAudioQue()
 {
 	while (audio_que_.GetSize()>0)
 	{
-		PackageInfo info;
+		AudioPackageInfo info;
 		audio_que_.WaitPop(info);
 
 		if(info.size>0)
@@ -157,16 +77,21 @@ void YMediaDecode::EmptyAudioQue()
 	}
 }
 
-PackageInfo YMediaDecode::PopAudioQue()
+AudioPackageInfo YMediaDecode::PopAudioQue()
 {
-	PackageInfo info;
+	AudioPackageInfo info;
 	audio_que_.WaitPop(info);
 	return info;
 }
 
+bool YMediaDecode::PopVideoQue(VideoPackageInfo&info)
+{
+	return video_que_.TryPop(info);
+}
+
 void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, long long dur, long long pts, YMediaPlayerError error)
 {
-	PackageInfo info;
+	AudioPackageInfo info;
 	info.data = data;
 	info.size = size;
 	info.dur = dur;
@@ -177,7 +102,7 @@ void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int chann
 	audio_que_.push(info);
 }
 
-void YMediaDecode::ReleasePackageInfo(PackageInfo*info)
+void YMediaDecode::ReleasePackageInfo(AudioPackageInfo*info)
 {
 	if (info->size > 0)
 		av_free(info->data);
@@ -226,15 +151,12 @@ void YMediaDecode::DecodecThread()
 		m_pFrameRGB = av_frame_alloc();
 		avpicture_fill((AVPicture *)m_pFrameRGB, m_buf, AV_PIX_FMT_BGR24, video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height);
 		m_pSwsCtx = sws_getContext(video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, video_ctx.codec_ctx_->pix_fmt, video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL);
-	
-
-		static std::thread th= std::move(std::thread(&YMediaDecode::PlayVideoThread,this));
 	}
 
 	AVFrame *decoded_frame = av_frame_alloc();
 	while (!is_need_stop_)
 	{
-		//if (audio_que_.GetSize() > QUE_PACKAGEINFO_SIZE)  //¿ØÖÆºÃ°üµÄÊýÁ¿
+		//if (audio_que_.GetSize() > QUE_PACKAGEINFO_SIZE)  //Â¿Ã˜Ã–Ã†ÂºÃƒÂ°Ã¼ÂµÃ„ÃŠÃ½ÃÂ¿
 		//{
 		//	std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		//	continue;
@@ -353,7 +275,7 @@ void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
 
 	if (First)
 	{
-		BYTE * m_bitBuffer = new BYTE[40 + 4 * 256];//¿ª±ÙÒ»¸öÄÚ´æÇøÓò  
+		BYTE * m_bitBuffer = new BYTE[40 + 4 * 256];//Â¿ÂªÂ±Ã™Ã’Â»Â¸Ã¶Ã„ÃšÂ´Ã¦Ã‡Ã¸Ã“Ã²  
 
 		if (m_bitBuffer == NULL)
 		{
@@ -365,7 +287,7 @@ void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
 		bitMapinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 		bitMapinfo->bmiHeader.biPlanes = 1;
 		for (int i = 0; i < 256; i++)
-		{ //ÑÕÉ«µÄÈ¡Öµ·¶Î§ (0-255)  
+		{ //Ã‘Ã•Ã‰Â«ÂµÃ„ÃˆÂ¡Ã–ÂµÂ·Â¶ÃŽÂ§ (0-255)  
 			bitMapinfo->bmiColors[i].rgbBlue = bitMapinfo->bmiColors[i].rgbGreen = bitMapinfo->bmiColors[i].rgbRed = (BYTE)i;
 		}
 	}
@@ -373,18 +295,18 @@ void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
 	bitMapinfo->bmiHeader.biWidth = width;
 	bitMapinfo->bmiHeader.biBitCount = 3 * 8;
 	RECT drect;
-	GetClientRect(hWnd, &drect);    //pWndÖ¸ÏòCWndÀàµÄÒ»¸öÖ¸Õë   
-	HDC hDC = GetDC(hWnd);     //HDCÊÇWindowsµÄÒ»ÖÖÊý¾ÝÀàÐÍ£¬ÊÇÉè±¸ÃèÊö¾ä±ú£»  
+	GetClientRect(hWnd, &drect);    //pWndÃ–Â¸ÃÃ²CWndÃ€Ã ÂµÃ„Ã’Â»Â¸Ã¶Ã–Â¸Ã•Ã«   
+	HDC hDC = GetDC(hWnd);     //HDCÃŠÃ‡WindowsÂµÃ„Ã’Â»Ã–Ã–ÃŠÃ½Â¾ÃÃ€Ã ÃÃÂ£Â¬ÃŠÃ‡Ã‰Ã¨Â±Â¸ÃƒÃ¨ÃŠÃ¶Â¾Ã¤Â±ÃºÂ£Â»  
 	SetStretchBltMode(hDC, COLORONCOLOR);
 	StretchDIBits(hDC,
 		0,
 		0,
-		drect.right,   //ÏÔÊ¾´°¿Ú¿í¶È  
-		drect.bottom,  //ÏÔÊ¾´°¿Ú¸ß¶È  
+		drect.right,   //ÃÃ”ÃŠÂ¾Â´Â°Â¿ÃšÂ¿Ã­Â¶Ãˆ  
+		drect.bottom,  //ÃÃ”ÃŠÂ¾Â´Â°Â¿ÃšÂ¸ÃŸÂ¶Ãˆ  
 		0,
 		0,
-		width,      //Í¼Ïñ¿í¶È  
-		height,      //Í¼Ïñ¸ß¶È  
+		width,      //ÃÂ¼ÃÃ±Â¿Ã­Â¶Ãˆ  
+		height,      //ÃÂ¼ÃÃ±Â¸ÃŸÂ¶Ãˆ  
 		data,
 		bitMapinfo,
 		DIB_RGB_COLORS,
@@ -435,11 +357,12 @@ void YMediaDecode::DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 		/*	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, codec_ctx->codec_ctx_->width,
 				codec_ctx->codec_ctx_->height, GL_RGB, GL_UNSIGNED_BYTE,
 				m_pFrameRGB->data[0]);*/
-			PackageInfo info;
+			long long pts = av_rescale_q(format_ctx->pkg_->pts, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });
+			VideoPackageInfo info;
 			info.data = m_pFrameRGB->data[0];
 			info.width = codec_ctx->codec_ctx_->width;
 			info.height = codec_ctx->codec_ctx_->height;
-
+			info.pts = pts;
 			video_que_.push(info);
 			
 
@@ -449,108 +372,19 @@ void YMediaDecode::DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 
 }
 
-void YMediaDecode::PlayVideoThread()
-{
-	glfwMakeContextCurrent(g_hwnd);
-
-
-
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-
-	glGenBuffers(1, &vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER,
-		4 * sizeof(GLfloat) * 3,
-		vertexArray, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(0);
-
-	glGenBuffers(1, &texture_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, texture_buffer);
-	glBufferData(GL_ARRAY_BUFFER,
-		4 * sizeof(GLfloat) * 2,
-		texCoord, GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(1);
-
-	//create map texture object
-	glGenTextures(1, &TextureID);
-	glBindTexture(GL_TEXTURE_2D, TextureID);
-	/* Setup some parameters for texture filters and mipmapping */
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-
-	vert_shader = glCreateShader(GL_VERTEX_SHADER);
-	frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	gltLoadShaderFile("C:/Identity.vp", vert_shader);
-	gltLoadShaderFile("C:/Identity.fp", frag_shader);
-
-	glCompileShader(vert_shader);
-	glCompileShader(frag_shader);
-
-	program = glCreateProgram();
-
-	glAttachShader(program, vert_shader);
-	glAttachShader(program, frag_shader);
-
-	glLinkProgram(program);
-
-	//Sleep(5000);
-
-	while (true)
-	{//do play
-		//while (video_que_.GetSize() > 50)
-		//{
-		//	break;
-		//}
-		
-		while (video_que_.GetSize()>0)
-		{
-			PackageInfo info;
-			if (!video_que_.TryPop(info))
-			{
-				//Sleep(500);
-				continue;
-			}
-
-			glTexImage2D(GL_TEXTURE_2D, 0,
-				GL_RGB,
-				info.width, info.height, 0,
-				GL_RGB, GL_UNSIGNED_BYTE, info.data);
-
-
-			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-			GLuint sampler_location;
-			glUseProgram(program);
-			sampler_location = glGetUniformLocation(program, "colorMap");
-			glUniform1i(sampler_location, 0);
-
-			glBindTexture(GL_TEXTURE_2D, TextureID);
-
-			glBindVertexArray(vao);
-			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-			glBindVertexArray(0);
-
-
-			glfwSwapBuffers(g_hwnd);
-
-		}
-		
-			
-
-
-		
-//		Sleep(40);
-	}
-
-}
+//double synchronize(AVFrame *srcFrame, double pts)
+//{
+//	double frame_delay;
+//
+//	if (pts != 0)
+//		video_clock = pts; // Get pts,then set video clock to it
+//	else
+//		pts = video_clock; // Don't get pts,set it to video clock
+//
+//	frame_delay = av_q2d(stream->codec->time_base);
+//	frame_delay += srcFrame->repeat_pict * (frame_delay * 0.5);
+//
+//	video_clock += frame_delay;
+//
+//	return pts;
+//}

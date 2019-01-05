@@ -46,15 +46,21 @@ enum YMediaPlayerError
 	
 };
 
-struct PackageInfo
+struct VideoPackageInfo
 {
 	void *data;
-	int size = 0;
 	int width;
 	int height;
 	long long pts;
+};
+
+
+struct AudioPackageInfo
+{
+	void *data;
+	int size = 0;
+	long long pts;
 	long long dur;
-	long long dts;
 	int sample_rate;
 	int channels;
 	YMediaPlayerError error = ERROR_NO_ERROR;
@@ -85,11 +91,13 @@ public:
 
 	void EmptyAudioQue();
 
-	PackageInfo PopAudioQue();
+	AudioPackageInfo PopAudioQue();
 	
+	bool PopVideoQue(VideoPackageInfo &);
+
 	void PushAudioQue(void *data,int size,int sample_rate,int channel, long long dur, long long pts, YMediaPlayerError error);
 
-	void ReleasePackageInfo(PackageInfo*);
+	void ReleasePackageInfo(AudioPackageInfo*);
 protected:
 
 	void DecodecThread();
@@ -98,7 +106,6 @@ protected:
 
 	void DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
 
-	void PlayVideoThread();
 private:
 
 	std::string path_file_;
@@ -111,8 +118,8 @@ private:
 
 	atomic_bool is_need_stop_;
 
-	ThreadSafe_Queue<PackageInfo> audio_que_;
-	ThreadSafe_Queue<PackageInfo> video_que_;
+	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
+	ThreadSafe_Queue<VideoPackageInfo> video_que_;
 
 	int m_PictureSize;
 

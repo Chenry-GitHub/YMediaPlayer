@@ -1,5 +1,88 @@
 ﻿#include "YMediaPlayer.h"
 
+#include <glm.hpp>
+#include <ext.hpp>
+#include <glfw3.h>
+
+GLfloat vertexArray[12] = { -0.9f, -0.9f, 0.0f,
+0.9f, -0.9f, 0.0f,
+0.9f,  0.9f, 0.0f,
+-0.9f,  0.9f, 0.0f };
+
+GLfloat texCoord[8] = { 0.0f, 0.0f,
+1.0f, 0.0f,
+1.0f, 1.0f,
+0.0f, 1.0f };         //ÓëjpgÍ¼Æ¬´æ´¢ÓÐ¹Ø£¬µ¹ÖÃµÄ
+
+#define AUDIO_OUT_SAMPLE_RATE 44100
+#define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/
+#define AUDIO_OUT_CHANNEL 2
+GLFWwindow  *g_hwnd;
+
+GLuint vao;
+GLuint vertex_buffer;
+GLuint texture_buffer;
+GLuint TextureID;
+GLuint vert_shader, frag_shader;
+GLuint program;
+
+
+/************************************************************************************/
+#include <stdio.h>
+#include <assert.h>
+#define MAX_SHADER_LENGTH 8192
+#define MAX_TARGET_NUM  10
+
+GLchar shaderText[MAX_SHADER_LENGTH];
+
+void gltLoadShaderSrc(const char *szShaderSrc, GLuint shader)
+{
+	GLchar *fsStringPtr[1];
+
+	fsStringPtr[0] = (GLchar *)szShaderSrc;
+	glShaderSource(shader, 1, (const GLchar **)fsStringPtr, NULL);
+}
+
+bool gltLoadShaderFile(const char *szFile, GLuint shader)
+{
+	GLint shaderLength = 0;
+	FILE *fp;
+
+	// Open the shader file
+	fp = fopen(szFile, "r");
+	if (fp != NULL)
+	{
+		// See how long the file is
+		while (fgetc(fp) != EOF)
+			shaderLength++;
+
+		// Allocate a block of memory to send in the shader
+		assert(shaderLength < MAX_SHADER_LENGTH);   // make me bigger!
+		if (shaderLength > MAX_SHADER_LENGTH)
+		{
+			fclose(fp);
+			return false;
+		}
+
+		// Go back to beginning of file
+		rewind(fp);
+
+		// Read the whole file in
+		if (shaderText != NULL)
+			fread(shaderText, 1, shaderLength, fp);
+
+		// Make sure it is null terminated and close the file
+		shaderText[shaderLength] = '\0';
+		fclose(fp);
+	}
+	else
+		return false;
+
+	// Load the string
+	gltLoadShaderSrc((const char *)shaderText, shader);
+
+	return true;
+}
 
 YMediaPlayer::YMediaPlayer()
 {
@@ -71,7 +154,10 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 	decoder_.SetMedia(path_file);
 	printf("decoder_.SetMedia\n");
 
-	play_thread_ = std::move(std::thread(&YMediaPlayer::PlayThread, this));
+	audio_thread_ = std::move(std::thread(&YMediaPlayer::AudioPlayThread, this));
+
+	//TODO
+	video_thread_ = std::move(std::thread(&YMediaPlayer::VideoPlayThread, this));
 
 	while (!is_prepare_)//wait for buffer file buff done!
 	{
@@ -111,9 +197,9 @@ bool YMediaPlayer::Stop()
 	alSourceStop(source_id_);
 	alSourcei(source_id_, AL_BUFFER, 0);
 
-	if (play_thread_.joinable())
+	if (audio_thread_.joinable())
 	{
-		play_thread_.join(); //next time !block here!
+		audio_thread_.join(); //next time !block here!
 	}
 
 	decoder_.StopDecode();
@@ -127,10 +213,10 @@ bool YMediaPlayer::IsPause()
 
 YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 {
-	PackageInfo info= decoder_.PopAudioQue();
+	AudioPackageInfo info= decoder_.PopAudioQue();
 	if (info .size <= 0 || info.error  != ERROR_NO_ERROR)
 		return info.error;
-	printf("package pts:%d\n",info.pts);
+	//printf("package pts:%d\n",info.pts);
 	ALenum fmt;
 	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, info.sample_rate);
 	alSourceQueueBuffers(source_id_, 1, &buf);
@@ -139,7 +225,7 @@ YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 	return ERROR_NO_ERROR;
 }
 
-int YMediaPlayer::PlayThread()
+int YMediaPlayer::AudioPlayThread()
 {
 	is_need_stop_ = false;
 	//first time ,need to fill the Source
@@ -181,4 +267,108 @@ int YMediaPlayer::PlayThread()
 		}
 	}
 	return true;
+}
+
+int YMediaPlayer::VideoPlayThread()
+{
+	glfwMakeContextCurrent(g_hwnd);
+
+
+
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	glGenBuffers(1, &vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER,
+		4 * sizeof(GLfloat) * 3,
+		vertexArray, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+	glEnableVertexAttribArray(0);
+
+	glGenBuffers(1, &texture_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, texture_buffer);
+	glBufferData(GL_ARRAY_BUFFER,
+		4 * sizeof(GLfloat) * 2,
+		texCoord, GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
+	glEnableVertexAttribArray(1);
+
+	//create map texture object
+	glGenTextures(1, &TextureID);
+	glBindTexture(GL_TEXTURE_2D, TextureID);
+	/* Setup some parameters for texture filters and mipmapping */
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+
+	vert_shader = glCreateShader(GL_VERTEX_SHADER);
+	frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	gltLoadShaderFile("C:/Identity.vp", vert_shader);
+	gltLoadShaderFile("C:/Identity.fp", frag_shader);
+
+	glCompileShader(vert_shader);
+	glCompileShader(frag_shader);
+
+	program = glCreateProgram();
+
+	glAttachShader(program, vert_shader);
+	glAttachShader(program, frag_shader);
+
+	glLinkProgram(program);
+
+	while (true)
+	{//do play
+	 //while (video_que_.GetSize() > 50)
+	 //{
+	 //	break;
+	 //}
+
+
+		VideoPackageInfo info;
+		while (decoder_.PopVideoQue(info))
+		{
+			
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			printf("video_pts:%d\n", info.pts);
+
+
+			glTexImage2D(GL_TEXTURE_2D, 0,
+				GL_RGB,
+				info.width, info.height, 0,
+				GL_RGB, GL_UNSIGNED_BYTE, info.data);
+
+
+			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+			GLuint sampler_location;
+			glUseProgram(program);
+			sampler_location = glGetUniformLocation(program, "colorMap");
+			glUniform1i(sampler_location, 0);
+
+			glBindTexture(GL_TEXTURE_2D, TextureID);
+
+			glBindVertexArray(vao);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+			glBindVertexArray(0);
+
+
+			glfwSwapBuffers(g_hwnd);
+
+		}
+
+
+
+
+
+		//		Sleep(40);
+	}
 }

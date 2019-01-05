@@ -15,6 +15,10 @@
 #include <condition_variable>
 #include <atomic>
 
+#include <glew.h>
+#include <glfw3.h>
+#include <gl/GL.h>
+
 #include "YMediaDecode.h"
 //#include "Shader.h"
 
@@ -42,16 +46,17 @@ public:
 
 	YMediaPlayerError FillAudioBuff(ALuint& buf);
 protected:
-	int  PlayThread();
+	int  AudioPlayThread();
 
-
+	int VideoPlayThread();
 private:
 	std::string path_file_;
 	ALuint		source_id_;
 
 	YMediaDecode  decoder_;
 
-	std::thread play_thread_;
+	std::thread audio_thread_;
+	std::thread video_thread_;
 
 	atomic_bool is_need_stop_;
 
@@ -61,7 +66,9 @@ private:
 
 	//为第一次执行
 	atomic_bool is_prepare_;
-	//
-
+	
+	//this is for synchronization
+	int audio_pts;
+	int video_pts;
 
 };
