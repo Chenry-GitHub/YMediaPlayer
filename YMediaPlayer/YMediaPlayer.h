@@ -49,6 +49,8 @@ protected:
 	int  AudioPlayThread();
 
 	int VideoPlayThread();
+
+	void synchronize_video();
 private:
 	std::string path_file_;
 	ALuint		source_id_;
@@ -68,7 +70,7 @@ private:
 	atomic_bool is_prepare_;
 	
 	//this is for synchronization
-	int audio_pts;
-	int video_pts;
+	double audio_clock_;
+	double video_clock_;
 
 };

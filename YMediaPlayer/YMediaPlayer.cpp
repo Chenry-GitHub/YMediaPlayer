@@ -105,6 +105,9 @@ YMediaPlayer::YMediaPlayer()
 	alGenBuffers(NUMBUFFERS, audio_buf_);
 
 	Stop();
+
+	audio_clock_ = 0.0f;
+	video_clock_ = 0.0f;
 }
 
 YMediaPlayer::~YMediaPlayer()
@@ -216,7 +219,9 @@ YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 	AudioPackageInfo info= decoder_.PopAudioQue();
 	if (info .size <= 0 || info.error  != ERROR_NO_ERROR)
 		return info.error;
+	audio_clock_ = info.clock;
 	//printf("package pts:%d\n",info.pts);
+	//printf("audio_clock:%f\n", info.clock);
 	ALenum fmt;
 	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, info.sample_rate);
 	alSourceQueueBuffers(source_id_, 1, &buf);
@@ -325,19 +330,15 @@ int YMediaPlayer::VideoPlayThread()
 
 	while (true)
 	{//do play
-	 //while (video_que_.GetSize() > 50)
-	 //{
-	 //	break;
-	 //}
-
-
 		VideoPackageInfo info;
 		while (decoder_.PopVideoQue(info))
 		{
-			
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			printf("video_pts:%d\n", info.pts);
+			video_clock_ = info.clock;
+			//printf("%f,%f \n", video_clock_, audio_clock_);
+			synchronize_video();
+			//printf("%f,%f \n", video_clock_, audio_clock_);
+		//	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+		//	printf("video_pts:%d\n", info.pts);
 
 
 			glTexImage2D(GL_TEXTURE_2D, 0,
@@ -370,5 +371,20 @@ int YMediaPlayer::VideoPlayThread()
 
 
 		//		Sleep(40);
+	}
+}
+
+void YMediaPlayer::synchronize_video()
+{
+	printf("%f,%f \n", video_clock_, audio_clock_);
+	while (1)
+	{
+		//printf("%f,%f \n", video_clock_,audio_clock_);
+		if (video_clock_ < audio_clock_)
+			break;
+		int delayTime = (video_clock_- audio_clock_) * 1000;
+		delayTime = delayTime > 5 ? 5 : delayTime;
+	//	printf("dealy time:%d\n",delayTime);
+		std::this_thread::sleep_for(std::chrono::milliseconds(delayTime));
 	}
 }

@@ -89,11 +89,12 @@ bool YMediaDecode::PopVideoQue(VideoPackageInfo&info)
 	return video_que_.TryPop(info);
 }
 
-void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, long long dur, long long pts, YMediaPlayerError error)
+void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, long long dur, long long pts, double clock, YMediaPlayerError error)
 {
 	AudioPackageInfo info;
 	info.data = data;
 	info.size = size;
+	info.clock = clock;
 	info.dur = dur;
 	info.pts = pts;
 	info.sample_rate = sample_rate;
@@ -118,7 +119,7 @@ void YMediaDecode::DecodecThread()
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("InitFormatCtx Error\n");
-		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,ERROR_FILE_ERROR);
+		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,0,ERROR_FILE_ERROR);
 		return;
 	}
 
@@ -129,7 +130,7 @@ void YMediaDecode::DecodecThread()
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("audio_ctx.InitDecoder Error\n");
-		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,ERROR_NO_QUIT);
+		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,0, 0,0,ERROR_NO_QUIT);
 		return;
 	}
 
@@ -215,6 +216,7 @@ void YMediaDecode::DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 		return;
 	}
 
+
 	/* read all the output frames (in general there may be any number of them */
 	while ((ret = avcodec_receive_frame(codec_ctx->codec_ctx_, frame)) == 0)
 	{
@@ -235,9 +237,9 @@ void YMediaDecode::DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 
 		
 		long long pts = av_rescale_q(format_ctx->pkg_->pts, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });
-
+		double clock = av_q2d(codec_ctx->GetStream()->time_base)*frame->pts;
 		//push to media player
-		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur,pts,ERROR_NO_ERROR);
+		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur,pts, clock,ERROR_NO_ERROR);
 		av_free(out_buffer);
 	}
 #else
@@ -314,6 +316,23 @@ void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
 	);
 	ReleaseDC(hWnd, hDC);
 }
+double YMediaDecode::synchronize(CodecCtx*codec, AVFrame *srcFrame, double pts)
+{
+	static double video_clock = 0.0f;
+	double frame_delay;
+	
+	if (pts != 0)
+		video_clock = pts; // Get pts,then set video clock to it
+	else
+		pts = video_clock; // Don't get pts,set it to video clock
+
+	frame_delay = av_q2d(codec->codec_ctx_->time_base);
+	frame_delay += srcFrame->repeat_pict * (frame_delay * 0.5);
+
+	video_clock += frame_delay;
+
+	return video_clock;
+}
 
 void YMediaDecode::DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *pFrame)
 {
@@ -357,12 +376,55 @@ void YMediaDecode::DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 		/*	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, codec_ctx->codec_ctx_->width,
 				codec_ctx->codec_ctx_->height, GL_RGB, GL_UNSIGNED_BYTE,
 				m_pFrameRGB->data[0]);*/
-			long long pts = av_rescale_q(format_ctx->pkg_->pts, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });
+			//long long pts = av_rescale_q(format_ctx->pkg_->pts, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });
+
+			double video_pts;
+			if (format_ctx->pkg_->dts == AV_NOPTS_VALUE && pFrame->opaque&& *(uint64_t*)pFrame->opaque != AV_NOPTS_VALUE)
+			{
+				video_pts = *(uint64_t *)pFrame->opaque;
+			}
+			else if (format_ctx->pkg_->dts != AV_NOPTS_VALUE)
+			{
+				video_pts = format_ctx->pkg_->dts;
+			}
+			else
+			{
+				video_pts = 0;
+			}
+
+			video_pts *= av_q2d(codec_ctx->GetStream()->time_base);
+			video_pts = synchronize(codec_ctx,pFrame, video_pts);
+		//	printf("deco%f \n", video_pts);
+
+			//frame->opaque = &pts;
+		//	video_pts = synchronize_video(is, pFrame, video_pts);
+		//	printf("video-pts:%f\n",video_pts);
+			//static double last_clock;
+
+
+			//double frame_delay;
+
+			//if (video_pts == 0)
+			//{
+			//	/* if we have pts, set video clock to it */
+			//	
+			//	/* if we aren't given a pts, set it to the clock */
+			//	video_pts = last_clock;
+			//}
+			///* update the video clock */
+			//frame_delay = av_q2d(codec_ctx->codec_ctx_->time_base);
+			///* if we are repeating a frame, adjust clock accordingly */
+			//frame_delay += pFrame->repeat_pict * (frame_delay * 0.5);
+			//video_pts += frame_delay;
+
+			//last_clock = video_pts;
+
 			VideoPackageInfo info;
 			info.data = m_pFrameRGB->data[0];
 			info.width = codec_ctx->codec_ctx_->width;
 			info.height = codec_ctx->codec_ctx_->height;
-			info.pts = pts;
+			info.pts = video_pts;
+			info.clock = video_pts;
 			video_que_.push(info);
 			
 

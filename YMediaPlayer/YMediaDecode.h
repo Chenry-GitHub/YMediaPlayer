@@ -51,7 +51,8 @@ struct VideoPackageInfo
 	void *data;
 	int width;
 	int height;
-	long long pts;
+	double pts;
+	double clock;
 };
 
 
@@ -59,6 +60,7 @@ struct AudioPackageInfo
 {
 	void *data;
 	int size = 0;
+	double clock;
 	long long pts;
 	long long dur;
 	int sample_rate;
@@ -95,9 +97,10 @@ public:
 	
 	bool PopVideoQue(VideoPackageInfo &);
 
-	void PushAudioQue(void *data,int size,int sample_rate,int channel, long long dur, long long pts, YMediaPlayerError error);
+	void PushAudioQue(void *data,int size,int sample_rate,int channel, long long dur, long long pts,double clock, YMediaPlayerError error);
 
 	void ReleasePackageInfo(AudioPackageInfo*);
+
 protected:
 
 	void DecodecThread();
@@ -106,6 +109,7 @@ protected:
 
 	void DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
 
+	double synchronize(CodecCtx*,AVFrame *srcFrame, double pts);
 private:
 
 	std::string path_file_;
@@ -139,6 +143,7 @@ private:
 	GLuint attribs[2];
 	GLuint uniforms[2];
 	///
+
 };
 
 
@@ -260,6 +265,12 @@ struct CodecCtx {
 			stream_index_ = stream_index;
 		}
 	}
+
+	AVStream *GetStream()
+	{
+		return format_->streams[stream_index_];
+	}
+
 	AVFormatContext *format_;
 	AVCodecContext *codec_ctx_;
 	int stream_index_;
