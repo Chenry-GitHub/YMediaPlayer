@@ -4,6 +4,7 @@
 #include <queue>
 #include <thread>
 #include <string>
+#include <memory>
 using namespace std;
 
 #include <windows.h>
@@ -72,8 +73,8 @@ using Player_CallBack = void(*) (LPARAM lp, WPARAM wp);
 
 #define _YMEDIA_CALLBACK(callback, val1 ,val2) if(callback){ callback(val1,val2); }
 
-struct FormatCtx;
-struct CodecCtx;
+class FormatCtx;
+class CodecCtx;
 class YMediaDecode
 {
 public:
@@ -104,11 +105,11 @@ protected:
 
 	void DecodecThread();
 
-	void DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame, SwrContext*au_convert_ctx);
+	void DoDecodeAudio(std::shared_ptr<FormatCtx> format_ctx, std::shared_ptr<CodecCtx> codec_ctx, AVFrame *frame, SwrContext*au_convert_ctx);
 
-	void DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
+	void DoDecodeVideo(std::shared_ptr<FormatCtx> format_ctx, std::shared_ptr<CodecCtx> codec_ctx, AVFrame *frame);
 
-	double synchronize(CodecCtx*,AVFrame *srcFrame, double pts);
+	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts);
 private:
 
 	std::string path_file_;
@@ -124,14 +125,20 @@ private:
 	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
 	ThreadSafe_Queue<VideoPackageInfo> video_que_;
 
-	int m_PictureSize;
+	std::weak_ptr<FormatCtx>		format_;
+	std::weak_ptr<CodecCtx>		audio_codec_;
+	std::weak_ptr<CodecCtx>		video_codec_;
 
-	uint8_t* m_buf;
+	SwrContext* audio_convert_ctx_;
+	SwsContext* video_convert_ctx_;
 
-	AVFrame *m_pFrameRGB;
+	//for video
+	int pic_size_;
+	uint8_t* pic_buff_;
+	AVFrame *rgb_frame_;
+	//
 
-	struct SwsContext *m_pSwsCtx;
-	
+
 	///
 	//Shader * shader_ptr_;
 	GLuint vao;
@@ -147,7 +154,8 @@ private:
 
 
 
-struct FormatCtx {
+class FormatCtx {
+public:
 	inline FormatCtx()
 		: open_input_(false){
 		ctx_= avformat_alloc_context();
@@ -193,7 +201,8 @@ struct FormatCtx {
 	AVPacket *pkg_;
 };
 
-struct CodecCtx {
+class CodecCtx {
+public:
 	inline CodecCtx(AVFormatContext * format_ctx, AVMediaType type)//AVMEDIA_TYPE_AUDIO
 		:format_(format_ctx)
 		, codec_ctx_(nullptr)
