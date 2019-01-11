@@ -222,7 +222,7 @@ YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 	if (info .size <= 0 || info.error  != ERROR_NO_ERROR)
 		return info.error;
 	audio_clock_ = info.pts;
-	audio_clock_ -= 0.026;
+	//audio_clock_ -= 0.026;
 	//printf("package pts:%d\n",info.pts);
 	//printf("audio_clock:%f\n", info.clock);
 	ALenum fmt;
@@ -353,16 +353,16 @@ int YMediaPlayer::VideoPlayThread()
 			glTexImage2D(GL_TEXTURE_2D, 0,
 				GL_RGB,
 				info.width, info.height, 0,
-				GL_RGB, GL_UNSIGNED_BYTE, info.data);
+				GL_BGR, GL_UNSIGNED_BYTE, info.data);
 
 
-			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+			glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 			GLuint sampler_location;
 			glUseProgram(program);
-			sampler_location = glGetUniformLocation(program, "colorMap");
-			glUniform1i(sampler_location, 0);
+		/*	sampler_location = glGetUniformLocation(program, "colorMap");
+			glUniform1i(sampler_location, 0);*/
 
 			glBindTexture(GL_TEXTURE_2D, TextureID);
 

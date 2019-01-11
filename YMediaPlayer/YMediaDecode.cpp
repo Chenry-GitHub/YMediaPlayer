@@ -175,11 +175,11 @@ void YMediaDecode::DecodecThread()
 	}
 	else
 	{
-		pic_size_ = avpicture_get_size(AV_PIX_FMT_RGB24, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height);
+		pic_size_ = avpicture_get_size(AV_PIX_FMT_BGR24, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height);
 		pic_buff_ = (uint8_t*)av_malloc(pic_size_);
 		rgb_frame_ = av_frame_alloc();
 		video_frame_ = av_frame_alloc();
-		avpicture_fill((AVPicture *)rgb_frame_, pic_buff_, AV_PIX_FMT_RGB24, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height);
+		avpicture_fill((AVPicture *)rgb_frame_, pic_buff_, AV_PIX_FMT_BGR24, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height);
 		video_convert_ctx_ = sws_getContext(video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height, video_ctx->codec_ctx_->pix_fmt, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL);
 	
 		
@@ -397,7 +397,7 @@ void YMediaDecode::DoConvertVideo(AVPacket *pkg)
 			// m_log->debug(QString("%1 %2").arg(pFrame->format == AV_PIX_FMT_YUV420P ? "OK" : "NO").arg(count));
 			// -----------------------------------------------
 			sws_scale(video_convert_ctx_, video_frame_->data, video_frame_->linesize, 0, codec_ctx->codec_ctx_->height, rgb_frame_->data, rgb_frame_->linesize);
-		//	ShowRGBToWnd(GetDesktopWindow(), m_pFrameRGB->data[0], codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height);
+		//	ShowRGBToWnd(GetDesktopWindow(), rgb_frame_->data[0], codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height);
 		/*	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, codec_ctx->codec_ctx_->width,
 				codec_ctx->codec_ctx_->height, GL_RGB, GL_UNSIGNED_BYTE,
 				m_pFrameRGB->data[0]);*/
