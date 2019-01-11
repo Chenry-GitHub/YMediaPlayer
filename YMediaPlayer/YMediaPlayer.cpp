@@ -222,6 +222,7 @@ YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 	if (info .size <= 0 || info.error  != ERROR_NO_ERROR)
 		return info.error;
 	audio_clock_ = info.pts;
+	audio_clock_ -= 0.026;
 	//printf("package pts:%d\n",info.pts);
 	//printf("audio_clock:%f\n", info.clock);
 	ALenum fmt;
@@ -388,10 +389,10 @@ void YMediaPlayer::synchronize_video()
 	while (1)
 	{
 		//printf("%f,%f \n", video_clock_,audio_clock_);
-		if (video_clock_ < audio_clock_)
+		if (video_clock_ <= audio_clock_)
 			break;
 		int delayTime = (video_clock_- audio_clock_) * 1000;
-		delayTime = delayTime > 5 ? 5 : delayTime;
+		delayTime = delayTime > 1 ? 1 : delayTime;
 	//	printf("dealy time:%d\n",delayTime);
 		std::this_thread::sleep_for(std::chrono::milliseconds(delayTime));
 	}

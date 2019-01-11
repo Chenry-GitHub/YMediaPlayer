@@ -350,7 +350,7 @@ double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFr
 		pts = video_clock; // Don't get pts,set it to video clock
 
 	frame_delay = av_q2d(codec->GetStream()->time_base);
-	frame_delay += srcFrame->repeat_pict * (frame_delay * 0.5);
+	frame_delay += srcFrame->repeat_pict * (frame_delay*0.5);
 
 	video_clock += frame_delay;
 
