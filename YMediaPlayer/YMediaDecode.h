@@ -60,9 +60,8 @@ struct AudioPackageInfo
 {
 	void *data;
 	int size = 0;
-	double clock;
-	long long pts;
-	long long dur;
+	double pts;
+	double dur;
 	int sample_rate;
 	int channels;
 	YMediaPlayerError error = ERROR_NO_ERROR;
@@ -97,7 +96,7 @@ public:
 	
 	bool PopVideoQue(VideoPackageInfo &);
 
-	void PushAudioQue(void *data,int size,int sample_rate,int channel, long long dur, long long pts,double clock, YMediaPlayerError error);
+	void PushAudioQue(void *data,int size,int sample_rate,int channel, double dur, double pts, YMediaPlayerError error);
 
 	void ReleasePackageInfo(AudioPackageInfo*);
 
@@ -105,7 +104,7 @@ protected:
 
 	void DecodecThread();
 
-	void DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
+	void DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame, SwrContext*au_convert_ctx);
 
 	void DoDecodeVideo(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame);
 

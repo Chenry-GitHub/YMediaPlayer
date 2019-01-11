@@ -89,12 +89,11 @@ bool YMediaDecode::PopVideoQue(VideoPackageInfo&info)
 	return video_que_.TryPop(info);
 }
 
-void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, long long dur, long long pts, double clock, YMediaPlayerError error)
+void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, double dur, double pts, YMediaPlayerError error)
 {
 	AudioPackageInfo info;
 	info.data = data;
 	info.size = size;
-	info.clock = clock;
 	info.dur = dur;
 	info.pts = pts;
 	info.sample_rate = sample_rate;
@@ -119,7 +118,7 @@ void YMediaDecode::DecodecThread()
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("InitFormatCtx Error\n");
-		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,0,ERROR_FILE_ERROR);
+		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,ERROR_FILE_ERROR);
 		return;
 	}
 
@@ -130,7 +129,7 @@ void YMediaDecode::DecodecThread()
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
 		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("audio_ctx.InitDecoder Error\n");
-		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,0, 0,0,ERROR_NO_QUIT);
+		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,0, 0,ERROR_NO_QUIT);
 		return;
 	}
 
@@ -147,12 +146,25 @@ void YMediaDecode::DecodecThread()
 		{
 			avformat_close_input(&format.ctx_);
 			avcodec_close(video_ctx.codec_ctx_);
-			return ;
+			return;
 		}
 		m_pFrameRGB = av_frame_alloc();
 		avpicture_fill((AVPicture *)m_pFrameRGB, m_buf, AV_PIX_FMT_BGR24, video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height);
-		m_pSwsCtx = sws_getContext(video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, video_ctx.codec_ctx_->pix_fmt, video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL);
+		m_pSwsCtx = sws_getContext(video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, video_ctx.codec_ctx_->pix_fmt, video_ctx.codec_ctx_->width, video_ctx.codec_ctx_->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL); 
 	}
+
+	SwrContext* au_convert_ctx = swr_alloc();
+	au_convert_ctx = swr_alloc_set_opts(au_convert_ctx,
+		AV_CH_LAYOUT_STEREO,
+		AV_SAMPLE_FMT_S16,
+		AUDIO_OUT_SAMPLE_RATE,
+		av_get_default_channel_layout(audio_ctx.codec_ctx_->channels),
+		audio_ctx.codec_ctx_->sample_fmt,
+		audio_ctx.codec_ctx_->sample_rate,
+		0,
+		NULL);
+	swr_init(au_convert_ctx);
+
 
 	AVFrame *decoded_frame = av_frame_alloc();
 	while (!is_need_stop_)
@@ -171,7 +183,7 @@ void YMediaDecode::DecodecThread()
 
 		if (format.pkg_->stream_index == audio_ctx.stream_index_)
 		{
-			DoDecodeAudio( &format, &audio_ctx, decoded_frame);
+			DoDecodeAudio( &format, &audio_ctx, decoded_frame, au_convert_ctx);
 		}
 		else if (format.pkg_->stream_index == video_ctx.stream_index_)
 		{
@@ -185,29 +197,18 @@ void YMediaDecode::DecodecThread()
 	{
 		format.pkg_->size = 0;
 		format.pkg_->data = nullptr;
-		DoDecodeAudio(&format, &audio_ctx, decoded_frame);
+		DoDecodeAudio(&format, &audio_ctx, decoded_frame, au_convert_ctx);
 	}
 	av_frame_free(&decoded_frame);
-
+	swr_free(&au_convert_ctx);
 
 	printf("YMediaDecode quit\n");
 }
 
 
 
-void YMediaDecode::DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame)
+void YMediaDecode::DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AVFrame *frame, SwrContext*au_convert_ctx)
 {
-	SwrContext *au_convert_ctx = swr_alloc_set_opts(NULL,
-			AV_CH_LAYOUT_STEREO,
-			AV_SAMPLE_FMT_S16,
-			AUDIO_OUT_SAMPLE_RATE,
-			av_get_default_channel_layout(codec_ctx->codec_ctx_->channels),
-			codec_ctx->codec_ctx_->sample_fmt,
-			codec_ctx->codec_ctx_->sample_rate,
-			0,
-			NULL);
-	swr_init(au_convert_ctx);
-	
 #if 1
 	int ret = avcodec_send_packet(codec_ctx->codec_ctx_, format_ctx->pkg_);
 	if (ret != 0)
@@ -216,37 +217,35 @@ void YMediaDecode::DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 		return;
 	}
 
-
 	/* read all the output frames (in general there may be any number of them */
 	while ((ret = avcodec_receive_frame(codec_ctx->codec_ctx_, frame)) == 0)
 	{
-		long long dur = av_rescale_q(format_ctx->pkg_->duration, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });;
-		int outSizeCandidate = AUDIO_OUT_SAMPLE_RATE * 8 *double(dur) / 1000000.0;
-		uint8_t *out_buffer = (uint8_t *)av_malloc(sizeof uint8_t *outSizeCandidate);
-		int out_samples =	swr_convert(au_convert_ctx, &out_buffer, outSizeCandidate, (const uint8_t **)&frame->data[0], frame->nb_samples);
+		//Pre-calculate the out buffer size for two channels
+		//int out_size_candidate = AUDIO_OUT_SAMPLE_RATE * AUDIO_OUT_CHANNEL * 2 * dur;
+		int out_size_candidate = av_samples_get_buffer_size(NULL,
+			codec_ctx->codec_ctx_->channels, frame->nb_samples, codec_ctx->codec_ctx_->sample_fmt, codec_ctx->codec_ctx_->block_align);
+		uint8_t *out_buffer = (uint8_t *)av_malloc(sizeof uint8_t *out_size_candidate);
+		//two channel
+		int out_samples = swr_convert(au_convert_ctx, &out_buffer, out_size_candidate, (const uint8_t **)frame->data, frame->nb_samples);
 
 		int Audiobuffer_size = av_samples_get_buffer_size(NULL,
 			AUDIO_OUT_CHANNEL, out_samples, AV_SAMPLE_FMT_S16, 1);
 
-		//Audiobuffer_size -= 40;
-
-		//printf("audio_stream :%d %d %d %d--size\n", frame->nb_samples, Audiobuffer_size, format_ctx->pkg_->pts, format_ctx->pkg_->size);
-
+		//push to media player
 		void * data = av_malloc(Audiobuffer_size);
 		memcpy_s(data, Audiobuffer_size, out_buffer, Audiobuffer_size);
-
-		
-		long long pts = av_rescale_q(format_ctx->pkg_->pts, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });
-		double clock = av_q2d(codec_ctx->GetStream()->time_base)*frame->pts;
-		//push to media player
-		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur,pts, clock,ERROR_NO_ERROR);
+		double dur = frame->pkt_duration* av_q2d(codec_ctx->GetStream()->time_base);
+		double pts = frame->pts *av_q2d(codec_ctx->GetStream()->time_base);
+		//printf("pts:pts:pts:%f\n",pts);
+		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur, pts,ERROR_NO_ERROR);
 		av_free(out_buffer);
 	}
 #else
 
 	int got=0;
 	int result = avcodec_decode_audio4(codec_ctx->codec_ctx_,frame,&got, format_ctx->pkg_);
-	//if(result>0)
+	if (result < 0)
+		return;
 
 	int dur = av_rescale_q(format_ctx->pkg_->duration, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });;
 	int outSizeCandidate = AUDIO_OUT_SAMPLE_RATE * 8 * double(dur) / 1000000.0;
@@ -261,11 +260,11 @@ void YMediaDecode::DoDecodeAudio(FormatCtx* format_ctx, CodecCtx * codec_ctx, AV
 	void * data = av_malloc(Audiobuffer_size);
 	memcpy_s(data, Audiobuffer_size, out_buffer, Audiobuffer_size);
 	//push to media player
-	PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, ERROR_NO_ERROR);
+	PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur,0,ERROR_NO_ERROR);
 	av_free(out_buffer);
 #endif
 
-	swr_free(&au_convert_ctx);
+	//swr_free(&au_convert_ctx);
 }
 void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
 {

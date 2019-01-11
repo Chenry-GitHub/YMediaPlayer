@@ -36,13 +36,13 @@
     <ClInclude Include="ThreadSafe_Queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="ALEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="YMediaPlayer2.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

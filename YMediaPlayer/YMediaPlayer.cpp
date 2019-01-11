@@ -3,6 +3,8 @@
 #include <glm.hpp>
 #include <ext.hpp>
 #include <glfw3.h>
+#include "qaqlog\qaqlog.h"
+
 
 GLfloat vertexArray[12] = { -0.9f, -0.9f, 0.0f,
 0.9f, -0.9f, 0.0f,
@@ -219,7 +221,7 @@ YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 	AudioPackageInfo info= decoder_.PopAudioQue();
 	if (info .size <= 0 || info.error  != ERROR_NO_ERROR)
 		return info.error;
-	audio_clock_ = info.clock;
+	audio_clock_ = info.pts;
 	//printf("package pts:%d\n",info.pts);
 	//printf("audio_clock:%f\n", info.clock);
 	ALenum fmt;
@@ -328,12 +330,15 @@ int YMediaPlayer::VideoPlayThread()
 
 	glLinkProgram(program);
 
+
+
 	while (true)
 	{//do play
 		VideoPackageInfo info;
 		while (decoder_.PopVideoQue(info))
 		{
 			video_clock_ = info.clock;
+
 			//printf("%f,%f \n", video_clock_, audio_clock_);
 			synchronize_video();
 			//printf("%f,%f \n", video_clock_, audio_clock_);

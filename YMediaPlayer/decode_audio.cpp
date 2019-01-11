@@ -2,7 +2,11 @@
 #include "TCHAR.h"  
 #include "YMediaPlayer.h"
 
-#include <glfw3.h>
+#include "qaqlog/qaqlog.h"
+#include "ALEngine.h"
+
+
+
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
@@ -11,6 +15,9 @@ const GLuint WIDTH = 800, HEIGHT = 600;
 
 int main(int argc, _TCHAR* argv[])
 {
+	lg::Initialize();
+	lg::AddConsoleLogger(lg::info);
+
 
 
 	// Init GLFW
@@ -40,9 +47,13 @@ int main(int argc, _TCHAR* argv[])
 
 	glfwMakeContextCurrent(NULL);
 
+	//ALEngine engine;
+	//engine.OpenFile("D:\\video.mp4");
+	//engine.Play();
+
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
-	player.SetMediaFromFile("C:\\video.mp4");
+	player.SetMediaFromFile("D:\\video.mp4");
 	player.Play();
 
 						  // Game loop
