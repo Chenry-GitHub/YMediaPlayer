@@ -105,9 +105,9 @@ protected:
 
 	void DecodecThread();
 
-	void DoDecodeAudio(std::shared_ptr<FormatCtx> format_ctx, std::shared_ptr<CodecCtx> codec_ctx, AVFrame *frame, SwrContext*au_convert_ctx);
+	void DoConvertAudio(AVPacket *pkg);
 
-	void DoDecodeVideo(std::shared_ptr<FormatCtx> format_ctx, std::shared_ptr<CodecCtx> codec_ctx, AVFrame *frame);
+	void DoConvertVideo(std::shared_ptr<FormatCtx> format_ctx, std::shared_ptr<CodecCtx> codec_ctx, AVFrame *frame);
 
 	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts);
 private:
@@ -125,7 +125,10 @@ private:
 	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
 	ThreadSafe_Queue<VideoPackageInfo> video_que_;
 
-	std::weak_ptr<FormatCtx>		format_;
+	ThreadSafe_Queue<AVPacket> audio_inner_que_;
+	ThreadSafe_Queue<AVPacket> video_inner_que_;
+
+	std::weak_ptr<FormatCtx>		format_ctx_;
 	std::weak_ptr<CodecCtx>		audio_codec_;
 	std::weak_ptr<CodecCtx>		video_codec_;
 
@@ -137,6 +140,9 @@ private:
 	uint8_t* pic_buff_;
 	AVFrame *rgb_frame_;
 	//
+
+	//for audio
+	AVFrame *audio_frame_;
 
 
 	///

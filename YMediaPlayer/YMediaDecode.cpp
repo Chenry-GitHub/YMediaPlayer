@@ -80,7 +80,13 @@ void YMediaDecode::EmptyAudioQue()
 AudioPackageInfo YMediaDecode::PopAudioQue()
 {
 	AudioPackageInfo info;
-	audio_que_.WaitPop(info);
+	//audio_que_.WaitPop(info);
+	AVPacket packet;
+	audio_inner_que_.WaitPop(packet);
+	DoConvertAudio(&packet);
+
+	audio_que_.TryPop(info);
+
 	return info;
 }
 
@@ -111,7 +117,10 @@ void YMediaDecode::ReleasePackageInfo(AudioPackageInfo*info)
 void YMediaDecode::DecodecThread()
 {
 	is_need_stop_ = false;
+	audio_frame_ = av_frame_alloc();
+
 	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>();
+	format_ctx_ = format;
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
@@ -123,6 +132,7 @@ void YMediaDecode::DecodecThread()
 
 	//this is for audio
 	std::shared_ptr<CodecCtx> audio_ctx = std::make_shared<CodecCtx>(format->ctx_, AVMEDIA_TYPE_AUDIO);
+	audio_codec_ = audio_ctx;
 	if (!audio_ctx->InitDecoder())
 	{
 		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
@@ -148,6 +158,8 @@ void YMediaDecode::DecodecThread()
 
 	//this is for video
 	std::shared_ptr<CodecCtx> video_ctx = std::make_shared<CodecCtx>(format->ctx_, AVMEDIA_TYPE_VIDEO);
+	video_codec_ = video_ctx;
+
 	if (!video_ctx->InitDecoder())
 	{
 		printf("video_ctx.InitDecoder Error\n");
@@ -162,7 +174,7 @@ void YMediaDecode::DecodecThread()
 	}
 
 	
-	AVFrame *decoded_frame = av_frame_alloc();
+	
 	while (!is_need_stop_)
 	{
 		if (!format->read())
@@ -172,11 +184,14 @@ void YMediaDecode::DecodecThread()
 		}
 		if (format->pkg_->stream_index == audio_ctx->stream_index_)
 		{
-			DoDecodeAudio( format, audio_ctx, decoded_frame, audio_convert_ctx_);
+			
+			audio_inner_que_.push(*av_packet_clone(format->pkg_));
+			// DoDecodeAudio(format, audio_ctx, decoded_frame, audio_convert_ctx_);
 		}
 		else if (format->pkg_->stream_index == video_ctx->stream_index_)
 		{
-			DoDecodeVideo(format, video_ctx, decoded_frame);
+			video_inner_que_.push(*av_packet_clone(format->pkg_));
+			//DoDecodeVideo(format, video_ctx, decoded_frame);
 		}
 		format->release_package();
 	}
@@ -186,9 +201,9 @@ void YMediaDecode::DecodecThread()
 	{
 		format->pkg_->size = 0;
 		format->pkg_->data = nullptr;
-		DoDecodeAudio(format, audio_ctx, decoded_frame, audio_convert_ctx_);
+		DoConvertAudio(format->pkg_);
 	}
-	av_frame_free(&decoded_frame);
+	av_frame_free(&audio_frame_);
 	swr_free(&audio_convert_ctx_);
 
 	printf("YMediaDecode quit\n");
@@ -196,10 +211,15 @@ void YMediaDecode::DecodecThread()
 
 
 
-void YMediaDecode::DoDecodeAudio(std::shared_ptr<FormatCtx> format_ctx, std::shared_ptr<CodecCtx> codec_ctx, AVFrame *frame, SwrContext*au_convert_ctx)
+void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 {
 #if 1
-	int ret = avcodec_send_packet(codec_ctx->codec_ctx_, format_ctx->pkg_);
+	std::shared_ptr<CodecCtx> codec_ctx = audio_codec_.lock();
+	if (!codec_ctx|| pkg->size<=0)
+	{
+		return;
+	}
+	int ret = avcodec_send_packet(codec_ctx->codec_ctx_, pkg);
 	if (ret != 0)
 	{
 		printf("avcodec_send_packet Error!\n");
@@ -207,15 +227,15 @@ void YMediaDecode::DoDecodeAudio(std::shared_ptr<FormatCtx> format_ctx, std::sha
 	}
 
 	/* read all the output frames (in general there may be any number of them */
-	while ((ret = avcodec_receive_frame(codec_ctx->codec_ctx_, frame)) == 0)
+	while ((ret = avcodec_receive_frame(codec_ctx->codec_ctx_, audio_frame_)) == 0)
 	{
 		//Pre-calculate the out buffer size for two channels
 		//int out_size_candidate = AUDIO_OUT_SAMPLE_RATE * AUDIO_OUT_CHANNEL * 2 * dur;
 		int out_size_candidate = av_samples_get_buffer_size(NULL,
-			codec_ctx->codec_ctx_->channels, frame->nb_samples, codec_ctx->codec_ctx_->sample_fmt, codec_ctx->codec_ctx_->block_align);
+			codec_ctx->codec_ctx_->channels, audio_frame_->nb_samples, codec_ctx->codec_ctx_->sample_fmt, codec_ctx->codec_ctx_->block_align);
 		uint8_t *out_buffer = (uint8_t *)av_malloc(sizeof uint8_t *out_size_candidate);
 		//two channel
-		int out_samples = swr_convert(au_convert_ctx, &out_buffer, out_size_candidate, (const uint8_t **)frame->data, frame->nb_samples);
+		int out_samples = swr_convert(audio_convert_ctx_, &out_buffer, out_size_candidate, (const uint8_t **)audio_frame_->data, audio_frame_->nb_samples);
 
 		int Audiobuffer_size = av_samples_get_buffer_size(NULL,
 			AUDIO_OUT_CHANNEL, out_samples, AV_SAMPLE_FMT_S16, 1);
@@ -223,8 +243,8 @@ void YMediaDecode::DoDecodeAudio(std::shared_ptr<FormatCtx> format_ctx, std::sha
 		//push to media player
 		void * data = av_malloc(Audiobuffer_size);
 		memcpy_s(data, Audiobuffer_size, out_buffer, Audiobuffer_size);
-		double dur = frame->pkt_duration* av_q2d(codec_ctx->GetStream()->time_base);
-		double pts = frame->pts *av_q2d(codec_ctx->GetStream()->time_base);
+		double dur = audio_frame_->pkt_duration* av_q2d(codec_ctx->GetStream()->time_base);
+		double pts = audio_frame_->pts *av_q2d(codec_ctx->GetStream()->time_base);
 		//printf("pts:pts:pts:%f\n",pts);
 		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur, pts,ERROR_NO_ERROR);
 		av_free(out_buffer);
@@ -322,7 +342,7 @@ double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFr
 	return video_clock;
 }
 
-void YMediaDecode::DoDecodeVideo(std::shared_ptr<FormatCtx> format_ctx, std::shared_ptr<CodecCtx> codec_ctx, AVFrame *pFrame)
+void YMediaDecode::DoConvertVideo(std::shared_ptr<FormatCtx> format_ctx, std::shared_ptr<CodecCtx> codec_ctx, AVFrame *pFrame)
 {
 	/*struct SwsContext *img_convert_ctx;
 
