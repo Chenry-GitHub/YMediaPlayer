@@ -94,8 +94,8 @@ public:
 	void EmptyAudioQue();
 
 	AudioPackageInfo PopAudioQue();
-	
-	bool PopVideoQue(VideoPackageInfo &);
+
+	VideoPackageInfo PopVideoQue();
 
 	void PushAudioQue(void *data,int size,int sample_rate,int channel, double dur, double pts, YMediaPlayerError error);
 
@@ -107,7 +107,7 @@ protected:
 
 	void DoConvertAudio(AVPacket *pkg);
 
-	void DoConvertVideo(std::shared_ptr<FormatCtx> format_ctx, std::shared_ptr<CodecCtx> codec_ctx, AVFrame *frame);
+	void DoConvertVideo(AVPacket *pkg);
 
 	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts);
 private:

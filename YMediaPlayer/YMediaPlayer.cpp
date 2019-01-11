@@ -3,7 +3,7 @@
 #include <glm.hpp>
 #include <ext.hpp>
 #include <glfw3.h>
-#include "qaqlog\qaqlog.h"
+//#include "qaqlog\qaqlog.h"
 
 
 GLfloat vertexArray[12] = { -0.9f, -0.9f, 0.0f,
@@ -334,9 +334,12 @@ int YMediaPlayer::VideoPlayThread()
 
 	while (true)
 	{//do play
-		VideoPackageInfo info;
-		while (decoder_.PopVideoQue(info))
+		
+		while (true)
 		{
+			VideoPackageInfo info = decoder_.PopVideoQue();
+			if(info.pts<=0)
+				continue;
 			video_clock_ = info.clock;
 
 			//printf("%f,%f \n", video_clock_, audio_clock_);

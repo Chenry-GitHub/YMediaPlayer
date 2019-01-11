@@ -2,7 +2,7 @@
 #include "TCHAR.h"  
 #include "YMediaPlayer.h"
 
-#include "qaqlog/qaqlog.h"
+//#include "qaqlog/qaqlog.h"
 #include "ALEngine.h"
 
 
@@ -15,8 +15,8 @@ const GLuint WIDTH = 800, HEIGHT = 600;
 
 int main(int argc, _TCHAR* argv[])
 {
-	lg::Initialize();
-	lg::AddConsoleLogger(lg::info);
+	//lg::Initialize();
+	//lg::AddConsoleLogger(lg::info);
 
 
 
@@ -53,7 +53,7 @@ int main(int argc, _TCHAR* argv[])
 
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
-	player.SetMediaFromFile("D:\\video.mp4");
+	player.SetMediaFromFile("C:\\video.mp4");
 	player.Play();
 
 						  // Game loop
