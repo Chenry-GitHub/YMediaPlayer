@@ -143,7 +143,7 @@ private:
 
 	//for audio
 	AVFrame *audio_frame_;
-
+	AVFrame *video_frame_;
 
 	///
 	//Shader * shader_ptr_;
