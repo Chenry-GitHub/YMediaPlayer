@@ -5,6 +5,7 @@
 #include <thread>
 #include <string>
 #include <memory>
+#include <functional>
 using namespace std;
 
 #include <windows.h>
@@ -33,17 +34,21 @@ enum YMediaCallBackType
 	MEDIA_ERROR,
 };
 
-
-
-
-
-enum YMediaPlayerError
+enum DecodecError
 {
 	ERROR_NO_ERROR = 0,
 	ERROR_NO_QUIT,
 	ERROR_FILE_ERROR,
+};
+
+struct DecodecStatus
+{
+	DecodecError error;
 	
 };
+
+
+
 
 struct VideoPackageInfo
 {
@@ -63,7 +68,7 @@ struct AudioPackageInfo
 	double dur;
 	int sample_rate;
 	int channels;
-	YMediaPlayerError error = ERROR_NO_ERROR;
+	DecodecError error = ERROR_NO_ERROR;
 };
 
 
@@ -96,7 +101,7 @@ public:
 
 	VideoPackageInfo PopVideoQue(); //video call back by multi-thread
 
-	void PushAudioQue(void *data,int size,int sample_rate,int channel, double dur, double pts, YMediaPlayerError error);
+	void PushAudioQue(void *data,int size,int sample_rate,int channel, double dur, double pts, DecodecError error);
 
 	void FreeAudioPackageInfo(AudioPackageInfo*);
 
@@ -110,6 +115,8 @@ protected:
 
 	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts);
 private:
+
+	void NotifyDecodecStatus(DecodecStatus);
 
 	std::string path_file_;
 
@@ -134,6 +141,8 @@ private:
 	std::weak_ptr<AVFrameManger> video_frame_;
 
 	std::weak_ptr<AVFrameManger> rgb_frame_;
+
+	std::function<void (DecodecStatus)> status_func_;
 };
 
 

@@ -46,7 +46,7 @@ public:
 
 	bool IsPause();
 
-	YMediaPlayerError FillAudioBuff(ALuint& buf);
+	DecodecError FillAudioBuff(ALuint& buf);
 protected:
 	int  AudioPlayThread();
 

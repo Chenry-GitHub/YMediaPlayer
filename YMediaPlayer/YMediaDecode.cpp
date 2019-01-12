@@ -126,7 +126,7 @@ VideoPackageInfo YMediaDecode::PopVideoQue()
 	return info;
 }
 
-void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, double dur, double pts, YMediaPlayerError error)
+void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, double dur, double pts, DecodecError error)
 {
 	AudioPackageInfo info;
 	info.data = data;
@@ -149,6 +149,7 @@ void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
 void YMediaDecode::DecodecThread()
 {
 	is_need_stop_ = false;
+	status_func_ = nullptr;
 	audio_convert_ctx_ = nullptr;
 	video_convert_ctx_ = nullptr;
 	uint8_t* pic_buff=nullptr;
@@ -157,8 +158,11 @@ void YMediaDecode::DecodecThread()
 	format_ctx_ = format;
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
+
+		DecodecStatus status;
+		status.error = ERROR_FILE_ERROR;
+		NotifyDecodecStatus(status);
 		printf("InitFormatCtx Error\n");
-		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,ERROR_FILE_ERROR);
 		return;
 	}
 
@@ -172,7 +176,10 @@ void YMediaDecode::DecodecThread()
 	if (!audio_ctx->InitDecoder())
 	{
 		printf("audio_ctx.InitDecoder Error\n");
-		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,0, 0,ERROR_NO_QUIT);
+		
+		DecodecStatus status;
+		status.error = ERROR_NO_QUIT;
+		NotifyDecodecStatus(status);
 		return;
 	}
 	else
@@ -202,6 +209,7 @@ void YMediaDecode::DecodecThread()
 	if (!video_ctx->InitDecoder())
 	{
 		printf("video_ctx.InitDecoder Error\n");
+		//NotifyDecodecStatus();
 	}
 	else
 	{
@@ -385,6 +393,17 @@ double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFr
 	video_clock += frame_delay;
 
 	return video_clock;
+}
+
+void YMediaDecode::NotifyDecodecStatus(DecodecStatus status)
+{
+	status_func_(status);
+	if (status.error != ERROR_NO_ERROR)
+	{
+
+		EmptyVideoQue();
+		EmptyAudioQue();
+	}
 }
 
 void YMediaDecode::DoConvertVideo(AVPacket *pkg)

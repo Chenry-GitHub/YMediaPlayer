@@ -223,7 +223,7 @@ bool YMediaPlayer::IsPause()
 	return is_pause_;
 }
 
-YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
+DecodecError YMediaPlayer::FillAudioBuff(ALuint& buf)
 {
 	AudioPackageInfo info= decoder_.PopAudioQue();
 	if (info .size <= 0 || info.error  != ERROR_NO_ERROR)
@@ -246,7 +246,7 @@ int YMediaPlayer::AudioPlayThread()
 	//first time ,need to fill the Source
 	for (int i = 0; i < NUMBUFFERS; i++)
 	{
-		if (YMediaPlayerError::ERROR_NO_ERROR != FillAudioBuff(audio_buf_[i]))
+		if (DecodecError::ERROR_NO_ERROR != FillAudioBuff(audio_buf_[i]))
 		{
 			is_need_stop_ = true;
 			break;
@@ -275,7 +275,7 @@ int YMediaPlayer::AudioPlayThread()
 			ALuint bufferID = 0;
 			alSourceUnqueueBuffers(source_id_, 1, &bufferID);
 			//printf("bufferID:%d\n", bufferID);
-			if (YMediaPlayerError::ERROR_NO_ERROR != FillAudioBuff(bufferID))
+			if (DecodecError::ERROR_NO_ERROR != FillAudioBuff(bufferID))
 			{
 				break;
 			}
