@@ -202,10 +202,17 @@ bool YMediaPlayer::Stop()
 	alSourceStop(source_id_);
 	alSourcei(source_id_, AL_BUFFER, 0);
 
+	if (video_thread_.joinable())
+	{
+		video_thread_.join();
+	}
+
 	if (audio_thread_.joinable())
 	{
-		audio_thread_.join(); //next time !block here!
+		audio_thread_.join(); //next time !block here! 
 	}
+
+	
 
 	decoder_.StopDecode();
 	return true;
@@ -228,7 +235,7 @@ YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 	ALenum fmt;
 	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, info.sample_rate);
 	alSourceQueueBuffers(source_id_, 1, &buf);
-	decoder_.ReleasePackageInfo(&info);
+	decoder_.FreeAudioPackageInfo(&info);
 
 	return ERROR_NO_ERROR;
 }
@@ -331,62 +338,52 @@ int YMediaPlayer::VideoPlayThread()
 
 	glLinkProgram(program);
 
+	while (false == is_need_stop_)
+	{
+		VideoPackageInfo info = decoder_.PopVideoQue();
+		if (!info.data)
+			continue;
+		video_clock_ = info.clock;
+
+		//printf("%f,%f \n", video_clock_, audio_clock_);
+		synchronize_video();
+		//printf("%f,%f \n", video_clock_, audio_clock_);
+	//	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+	//	printf("video_pts:%d\n", info.pts);
 
 
-	while (true)
-	{//do play
-		
-		while (true)
-		{
-			VideoPackageInfo info = decoder_.PopVideoQue();
-			if(info.pts<=0)
-				continue;
-			video_clock_ = info.clock;
-
-			//printf("%f,%f \n", video_clock_, audio_clock_);
-			synchronize_video();
-			//printf("%f,%f \n", video_clock_, audio_clock_);
-		//	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
-		//	printf("video_pts:%d\n", info.pts);
+		glTexImage2D(GL_TEXTURE_2D, 0,
+			GL_RGB,
+			info.width, info.height, 0,
+			GL_BGR, GL_UNSIGNED_BYTE, info.data);
 
 
-			glTexImage2D(GL_TEXTURE_2D, 0,
-				GL_RGB,
-				info.width, info.height, 0,
-				GL_BGR, GL_UNSIGNED_BYTE, info.data);
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+		//GLuint sampler_location;
+		glUseProgram(program);
+		//sampler_location = glGetUniformLocation(program, "colorMap");
+		//glUniform1i(sampler_location, 0);
+
+		glBindTexture(GL_TEXTURE_2D, TextureID);
+
+		glBindVertexArray(vao);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glBindVertexArray(0);
 
 
-			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-			//GLuint sampler_location;
-			glUseProgram(program);
-			//sampler_location = glGetUniformLocation(program, "colorMap");
-			//glUniform1i(sampler_location, 0);
-
-			glBindTexture(GL_TEXTURE_2D, TextureID);
-
-			glBindVertexArray(vao);
-			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-			glBindVertexArray(0);
-
-
-			glfwSwapBuffers(g_hwnd);
-
-		}
-
-
-
-
-
-		//		Sleep(40);
+		glfwSwapBuffers(g_hwnd);
 	}
+
+	glfwMakeContextCurrent(NULL);
+	return 1;
 }
 
 void YMediaPlayer::synchronize_video()
 {
 	printf("%f,%f \n", video_clock_, audio_clock_);
-	while (1)
+	while (false == is_need_stop_)
 	{
 		//printf("%f,%f \n", video_clock_,audio_clock_);
 		if (video_clock_ <= audio_clock_)

@@ -7,7 +7,7 @@
 
 
 
-
+YMediaPlayer *g_player;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
 
@@ -53,7 +53,8 @@ int main(int argc, _TCHAR* argv[])
 
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
-	player.SetMediaFromFile("D:\\video3.mp4");
+	g_player = &player;
+	player.SetMediaFromFile("D:\\video4.mp4");
 	player.Play();
 
 						  // Game loop
@@ -62,6 +63,7 @@ int main(int argc, _TCHAR* argv[])
 		// 检查事件，调用相应的回调函数，如下文的key_callback函数
 		glfwPollEvents();
 
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	glfwTerminate();
 	return 0;
@@ -72,5 +74,8 @@ int main(int argc, _TCHAR* argv[])
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);
+	{
+		g_player->SetMediaFromFile("D:\\video4.mp4");
+		g_player->Play();
+	}
 }
