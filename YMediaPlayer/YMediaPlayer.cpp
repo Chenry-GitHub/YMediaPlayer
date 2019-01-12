@@ -222,7 +222,7 @@ YMediaPlayerError YMediaPlayer::FillAudioBuff(ALuint& buf)
 	if (info .size <= 0 || info.error  != ERROR_NO_ERROR)
 		return info.error;
 	audio_clock_ = info.pts;
-	audio_clock_ -= 0.026;
+	audio_clock_ -= 0.026*NUMBUFFERS;
 	//printf("package pts:%d\n",info.pts);
 	//printf("audio_clock:%f\n", info.clock);
 	ALenum fmt;
