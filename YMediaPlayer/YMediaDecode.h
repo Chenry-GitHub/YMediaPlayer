@@ -9,8 +9,7 @@ using namespace std;
 
 #include <windows.h>
 
-class GLFWwindow ;
-extern GLFWwindow  *g_hwnd;
+
 
 extern "C"
 {
@@ -24,7 +23,6 @@ extern "C"
 }
 
 #include "ThreadSafe_Queue.h"
-#include <glew.h>
 //#include "Shader.h"
 
 
@@ -49,7 +47,7 @@ enum YMediaPlayerError
 
 struct VideoPackageInfo
 {
-	void *data;
+	void *data=nullptr;
 	int width;
 	int height;
 	double pts;
@@ -59,7 +57,7 @@ struct VideoPackageInfo
 
 struct AudioPackageInfo
 {
-	void *data;
+	void *data=nullptr;
 	int size = 0;
 	double pts;
 	double dur;
@@ -75,13 +73,12 @@ using Player_CallBack = void(*) (LPARAM lp, WPARAM wp);
 
 class FormatCtx;
 class CodecCtx;
+class AVFrameManger;
 class YMediaDecode
 {
 public:
 	YMediaDecode();
 	~YMediaDecode();
-
-	void SetPlayerCallBack(Player_CallBack call_back);
 
 	bool SetMedia(const std::string & path_file);
 
@@ -93,13 +90,15 @@ public:
 
 	void EmptyAudioQue();
 
-	AudioPackageInfo PopAudioQue();
+	void EmptyVideoQue();
 
-	VideoPackageInfo PopVideoQue();
+	AudioPackageInfo PopAudioQue();//audio call back by multi-thread
+
+	VideoPackageInfo PopVideoQue(); //video call back by multi-thread
 
 	void PushAudioQue(void *data,int size,int sample_rate,int channel, double dur, double pts, YMediaPlayerError error);
 
-	void ReleasePackageInfo(AudioPackageInfo*);
+	void FreeAudioPackageInfo(AudioPackageInfo*);
 
 protected:
 
@@ -116,17 +115,13 @@ private:
 
 	std::thread decodec_thread_;
 
-	YMediaPlayerError error_;
-
-	Player_CallBack  call_back_;
-
 	atomic_bool is_need_stop_;
 
 	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
 	ThreadSafe_Queue<VideoPackageInfo> video_que_;
 
-	ThreadSafe_Queue<AVPacket> audio_inner_que_;
-	ThreadSafe_Queue<AVPacket> video_inner_que_;
+	ThreadSafe_Queue<AVPacket*> audio_inner_que_;
+	ThreadSafe_Queue<AVPacket*> video_inner_que_;
 
 	std::weak_ptr<FormatCtx>		format_ctx_;
 	std::weak_ptr<CodecCtx>		audio_codec_;
@@ -135,27 +130,10 @@ private:
 	SwrContext* audio_convert_ctx_;
 	SwsContext* video_convert_ctx_;
 
-	//for video
-	int pic_size_;
-	uint8_t* pic_buff_;
-	AVFrame *rgb_frame_;
-	//
+	std::weak_ptr<AVFrameManger> audio_frame_;
+	std::weak_ptr<AVFrameManger> video_frame_;
 
-	//for audio
-	AVFrame *audio_frame_;
-	AVFrame *video_frame_;
-
-	///
-	//Shader * shader_ptr_;
-	GLuint vao;
-	GLuint vert_buf;
-	GLuint elem_buf;
-	GLuint frame_tex;
-	GLuint program;
-	GLuint attribs[2];
-	GLuint uniforms[2];
-	///
-
+	std::weak_ptr<AVFrameManger> rgb_frame_;
 };
 
 
@@ -291,3 +269,16 @@ public:
 	AVMediaType type_;
 };
 
+class AVFrameManger
+{
+public:
+	AVFrameManger()
+	{
+		frame_ = av_frame_alloc();
+	}
+	~AVFrameManger()
+	{
+		av_frame_free(&frame_);
+	}
+	AVFrame *frame_;
+};

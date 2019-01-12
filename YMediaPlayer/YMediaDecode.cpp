@@ -5,30 +5,17 @@
 #define AUDIO_OUT_SAMPLE_RATE 44100
 #define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/
 #define AUDIO_OUT_CHANNEL 2
-GLFWwindow  *g_hwnd;
 
 
 
 YMediaDecode::YMediaDecode()
-	: call_back_(nullptr)
 {
 	is_need_stop_ = false;
-
-	//shader_ptr_ = new Shader("C:/vert.shr", "C:/frame.shr");
-	//
-
-
-	//shader_ptr_->Use();
 }
 
 YMediaDecode::~YMediaDecode()
 {
 
-}
-
-void YMediaDecode::SetPlayerCallBack(Player_CallBack call_back)
-{
-	call_back_ = call_back;
 }
 
 bool YMediaDecode::SetMedia(const std::string & path_file)
@@ -52,7 +39,7 @@ bool YMediaDecode::StopDecode()
 		decodec_thread_.join();//block here
 	}
 	EmptyAudioQue();
-	error_ = YMediaPlayerError::ERROR_NO_ERROR;
+	EmptyVideoQue();
 	return true;
 }
 
@@ -66,14 +53,48 @@ bool YMediaDecode::StartDecode()
 
 void YMediaDecode::EmptyAudioQue()
 {
+	while (audio_inner_que_.GetSize()>0)
+	{
+		AVPacket *pkg;
+		if (audio_inner_que_.TryPop(pkg))
+		{
+			av_packet_unref(pkg);
+			av_packet_free(&pkg);
+		}
+	}
+
 	while (audio_que_.GetSize()>0)
 	{
 		AudioPackageInfo info;
-		audio_que_.WaitPop(info);
+		if (audio_que_.TryPop(info))
+		{
+			if (info.size > 0)
+				av_free(info.data);
+		}
+	}
 
-		if(info.size>0)
+
+}
+
+void YMediaDecode::EmptyVideoQue()
+{
+	while (video_inner_que_.GetSize() > 0)
+	{
+		AVPacket *pkg;
+		if (video_inner_que_.TryPop(pkg))
+		{
+			av_packet_unref(pkg);
+			av_packet_free(&pkg);
+		}
+	}
+
+	while (video_que_.GetSize() > 0)
+	{
+		VideoPackageInfo info;
+		if (video_que_.TryPop(info))
+		{
 			av_free(info.data);
-
+		}
 	}
 }
 
@@ -81,9 +102,11 @@ AudioPackageInfo YMediaDecode::PopAudioQue()
 {
 	AudioPackageInfo info;
 	
-	AVPacket packet;
+	AVPacket *packet;
 	audio_inner_que_.WaitPop(packet);
-	DoConvertAudio(&packet);
+	DoConvertAudio(packet);
+	av_packet_unref(packet);
+	av_packet_free(&packet);
 
 	audio_que_.TryPop(info);
 
@@ -94,10 +117,11 @@ VideoPackageInfo YMediaDecode::PopVideoQue()
 {
 	VideoPackageInfo info;
 
-	AVPacket packet;
+	AVPacket *packet;
 	video_inner_que_.WaitPop(packet);
-	DoConvertVideo(&packet);
-
+	DoConvertVideo(packet);
+	av_packet_unref(packet);
+	av_packet_free(&packet);
 	video_que_.TryPop(info);
 	return info;
 }
@@ -115,23 +139,24 @@ void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int chann
 	audio_que_.push(info);
 }
 
-void YMediaDecode::ReleasePackageInfo(AudioPackageInfo*info)
+void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
 {
-	if (info->size > 0)
+	if (info->data)
 		av_free(info->data);
 }
+
 
 void YMediaDecode::DecodecThread()
 {
 	is_need_stop_ = false;
-	
+	audio_convert_ctx_ = nullptr;
+	video_convert_ctx_ = nullptr;
+	uint8_t* pic_buff=nullptr;
 
 	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>();
 	format_ctx_ = format;
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
-		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
-		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("InitFormatCtx Error\n");
 		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,ERROR_FILE_ERROR);
 		return;
@@ -140,18 +165,18 @@ void YMediaDecode::DecodecThread()
 	//this is for audio
 	std::shared_ptr<CodecCtx> audio_ctx = std::make_shared<CodecCtx>(format->ctx_, AVMEDIA_TYPE_AUDIO);
 	audio_codec_ = audio_ctx;
+
+	std::shared_ptr<AVFrameManger > audio_frame = std::make_shared<AVFrameManger>();
+	audio_frame_ = audio_frame;
+
 	if (!audio_ctx->InitDecoder())
 	{
-		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
-		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("audio_ctx.InitDecoder Error\n");
 		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,0, 0,ERROR_NO_QUIT);
 		return;
 	}
 	else
 	{
-		audio_frame_ = av_frame_alloc();
-
 		audio_convert_ctx_ = swr_alloc();
 		audio_convert_ctx_ = swr_alloc_set_opts(audio_convert_ctx_,
 			AV_CH_LAYOUT_STEREO,
@@ -169,46 +194,50 @@ void YMediaDecode::DecodecThread()
 	std::shared_ptr<CodecCtx> video_ctx = std::make_shared<CodecCtx>(format->ctx_, AVMEDIA_TYPE_VIDEO);
 	video_codec_ = video_ctx;
 
+	std::shared_ptr<AVFrameManger > video_frame = std::make_shared<AVFrameManger>();
+	video_frame_ = video_frame;
+
+	std::shared_ptr<AVFrameManger > rgb_frame = std::make_shared<AVFrameManger>();
+	rgb_frame_ = rgb_frame;
 	if (!video_ctx->InitDecoder())
 	{
 		printf("video_ctx.InitDecoder Error\n");
 	}
 	else
 	{
-		pic_size_ = avpicture_get_size(AV_PIX_FMT_BGR24, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height);
-		pic_buff_ = (uint8_t*)av_malloc(pic_size_);
-		rgb_frame_ = av_frame_alloc();
-		video_frame_ = av_frame_alloc();
-		avpicture_fill((AVPicture *)rgb_frame_, pic_buff_, AV_PIX_FMT_BGR24, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height);
+		int pic_size_ = avpicture_get_size(AV_PIX_FMT_RGB24, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height);
+		pic_buff = (uint8_t*)av_malloc(pic_size_);
+		avpicture_fill((AVPicture *)(rgb_frame->frame_), pic_buff, AV_PIX_FMT_RGB24, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height);
 		video_convert_ctx_ = sws_getContext(video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height, video_ctx->codec_ctx_->pix_fmt, video_ctx->codec_ctx_->width, video_ctx->codec_ctx_->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL);
-	
-		
 	}
-
-	
+		
 	
 	while (!is_need_stop_)
 	{
 		if (!format->read())
 		{
-			printf("format.read() Error\n");
+			printf("av_read_frame Read Done!\n");
 			break;
 		}
 		if (format->pkg_->stream_index == audio_ctx->stream_index_)
 		{
-			audio_inner_que_.push(*av_packet_clone(format->pkg_));
-			// DoDecodeAudio(format, audio_ctx, decoded_frame, audio_convert_ctx_);
+			AVPacket *pkg = av_packet_alloc();
+			av_packet_ref(pkg, format->pkg_);
+			audio_inner_que_.push(pkg);
 		}
 		else if (format->pkg_->stream_index == video_ctx->stream_index_)
 		{
-			//printf("Video\n");
-			video_inner_que_.push(*av_packet_clone(format->pkg_));
-			//DoDecodeVideo(format, video_ctx, decoded_frame);
+			AVPacket *pkg = av_packet_alloc();
+				av_packet_ref(pkg, format->pkg_);
+				video_inner_que_.push(pkg);
 		}
 		format->release_package();
 	}
 
-	while (audio_inner_que_.GetSize());
+	while (!is_need_stop_ && audio_inner_que_.GetSize())
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
 
 	printf("After while\n");
 	/* flush the decoder */
@@ -218,9 +247,9 @@ void YMediaDecode::DecodecThread()
 		format->pkg_->data = nullptr;
 		DoConvertAudio(format->pkg_);
 	}
-	av_frame_free(&audio_frame_);
 	swr_free(&audio_convert_ctx_);
-
+	sws_freeContext(video_convert_ctx_);
+	av_free(pic_buff);
 	printf("YMediaDecode quit\n");
 }
 
@@ -229,8 +258,9 @@ void YMediaDecode::DecodecThread()
 void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 {
 #if 1
-	std::shared_ptr<CodecCtx> codec_ctx = audio_codec_.lock();
-	if (!codec_ctx|| pkg->size<=0)
+	auto audio_frame = audio_frame_.lock();
+	auto codec_ctx = audio_codec_.lock();
+	if (!codec_ctx || !audio_frame)
 	{
 		return;
 	}
@@ -242,15 +272,15 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 	}
 
 	/* read all the output frames (in general there may be any number of them */
-	while ((ret = avcodec_receive_frame(codec_ctx->codec_ctx_, audio_frame_)) == 0)
+	while ((ret = avcodec_receive_frame(codec_ctx->codec_ctx_, audio_frame->frame_)) == 0)
 	{
 		//Pre-calculate the out buffer size for two channels
 		//int out_size_candidate = AUDIO_OUT_SAMPLE_RATE * AUDIO_OUT_CHANNEL * 2 * dur;
 		int out_size_candidate = av_samples_get_buffer_size(NULL,
-			codec_ctx->codec_ctx_->channels, audio_frame_->nb_samples, codec_ctx->codec_ctx_->sample_fmt, codec_ctx->codec_ctx_->block_align);
+			codec_ctx->codec_ctx_->channels, audio_frame->frame_->nb_samples, codec_ctx->codec_ctx_->sample_fmt, codec_ctx->codec_ctx_->block_align);
 		uint8_t *out_buffer = (uint8_t *)av_malloc(sizeof uint8_t *out_size_candidate);
 		//two channel
-		int out_samples = swr_convert(audio_convert_ctx_, &out_buffer, out_size_candidate, (const uint8_t **)audio_frame_->data, audio_frame_->nb_samples);
+		int out_samples = swr_convert(audio_convert_ctx_, &out_buffer, out_size_candidate, (const uint8_t **)audio_frame->frame_->data, audio_frame->frame_->nb_samples);
 
 		int Audiobuffer_size = av_samples_get_buffer_size(NULL,
 			AUDIO_OUT_CHANNEL, out_samples, AV_SAMPLE_FMT_S16, 1);
@@ -258,8 +288,8 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 		//push to media player
 		void * data = av_malloc(Audiobuffer_size);
 		memcpy_s(data, Audiobuffer_size, out_buffer, Audiobuffer_size);
-		double dur = audio_frame_->pkt_duration* av_q2d(codec_ctx->GetStream()->time_base);
-		double pts = audio_frame_->pts *av_q2d(codec_ctx->GetStream()->time_base);
+		double dur = audio_frame->frame_->pkt_duration* av_q2d(codec_ctx->GetStream()->time_base);
+		double pts = audio_frame->frame_->pts *av_q2d(codec_ctx->GetStream()->time_base);
 		//printf("pts:pts:pts:%f\n",pts);
 		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur, pts,ERROR_NO_ERROR);
 		av_free(out_buffer);
@@ -359,54 +389,29 @@ double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFr
 
 void YMediaDecode::DoConvertVideo(AVPacket *pkg)
 {
-
+	auto video_frame = video_frame_.lock();
 	auto codec_ctx = video_codec_.lock();
-	/*struct SwsContext *img_convert_ctx;
+	auto rgb_frame = rgb_frame_.lock();
+	if (!codec_ctx || !video_frame||!rgb_frame)
+		return;
 
-	AVFrame *pFrameYUV = av_frame_alloc();
-	img_convert_ctx = sws_getContext(codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, codec_ctx->codec_ctx_->pix_fmt,
-		codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
-	unsigned char *out_buffer = (unsigned char *)av_malloc(av_image_get_buffer_size(AV_PIX_FMT_YUV420P, codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, 1));
-	av_image_fill_arrays(pFrameYUV->data, pFrameYUV->linesize, out_buffer,
-		AV_PIX_FMT_YUV420P, codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height, 1);
-
-
-	int ret = avcodec_send_packet(codec_ctx->codec_ctx_, format_ctx->pkg_);
-	if (ret != 0)
+	if (avcodec_send_packet(codec_ctx->codec_ctx_, pkg))
 	{
+		printf("avcodec_send_packet :video error\n");
 		return;
 	}
 
-	while ((ret = avcodec_receive_frame(codec_ctx->codec_ctx_, frame)) == 0)
+
+	while (avcodec_receive_frame(codec_ctx->codec_ctx_, video_frame->frame_) == 0)
 	{
-		sws_scale(img_convert_ctx, (const unsigned char* const*)frame->data, frame->linesize, 0, codec_ctx->codec_ctx_->height,
-			pFrameYUV->data, pFrameYUV->linesize);
-
-		ShowRGBToWnd(hwnd, pFrameYUV->data[0], codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height);
-
-	}
-
-	sws_freeContext(img_convert_ctx);
-	av_frame_free(&pFrameYUV);*/
-
-	int frameFinished = avcodec_send_packet(codec_ctx->codec_ctx_, pkg);
-	while (!frameFinished) {
-		// For decoding, call avcodec_receive_frame(). On success, it will return an AVFrame containing uncompressed audio or video data.
-		frameFinished = avcodec_receive_frame(codec_ctx->codec_ctx_, video_frame_);
-		if (!frameFinished) {
-			// m_log->debug(QString("%1 %2").arg(pFrame->format == AV_PIX_FMT_YUV420P ? "OK" : "NO").arg(count));
-			// -----------------------------------------------
-			sws_scale(video_convert_ctx_, video_frame_->data, video_frame_->linesize, 0, codec_ctx->codec_ctx_->height, rgb_frame_->data, rgb_frame_->linesize);
-		//	ShowRGBToWnd(GetDesktopWindow(), rgb_frame_->data[0], codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height);
-		/*	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, codec_ctx->codec_ctx_->width,
-				codec_ctx->codec_ctx_->height, GL_RGB, GL_UNSIGNED_BYTE,
-				m_pFrameRGB->data[0]);*/
-			//long long pts = av_rescale_q(format_ctx->pkg_->pts, codec_ctx->codec_ctx_->time_base, AVRational{ 1, AV_TIME_BASE });
+			sws_scale(video_convert_ctx_, video_frame->frame_->data, video_frame->frame_->linesize, 0, codec_ctx->codec_ctx_->height, rgb_frame->frame_->data, rgb_frame->frame_->linesize);
+		//	ShowRGBToWnd(GetDesktopWindow(), m_pFrameRGB->data[0], codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height);
+		
 
 			double video_pts;
-			if (pkg->dts == AV_NOPTS_VALUE && rgb_frame_->opaque&& *(uint64_t*)rgb_frame_->opaque != AV_NOPTS_VALUE)
+			if (pkg->dts == AV_NOPTS_VALUE && rgb_frame->frame_->opaque&& *(uint64_t*)rgb_frame->frame_->opaque != AV_NOPTS_VALUE)
 			{
-				video_pts = *(uint64_t *)rgb_frame_->opaque;
+				video_pts = *(uint64_t *)rgb_frame->frame_->opaque;
 			}
 			else if (pkg->dts != AV_NOPTS_VALUE)
 			{
@@ -418,60 +423,14 @@ void YMediaDecode::DoConvertVideo(AVPacket *pkg)
 			}
 
 			video_pts *= av_q2d(codec_ctx->GetStream()->time_base);
-			video_pts = synchronize(codec_ctx, rgb_frame_, video_pts);
-		//	printf("deco%f \n", video_pts);
-
-			//frame->opaque = &pts;
-		//	video_pts = synchronize_video(is, pFrame, video_pts);
-		//	printf("video-pts:%f\n",video_pts);
-			//static double last_clock;
-
-
-			//double frame_delay;
-
-			//if (video_pts == 0)
-			//{
-			//	/* if we have pts, set video clock to it */
-			//	
-			//	/* if we aren't given a pts, set it to the clock */
-			//	video_pts = last_clock;
-			//}
-			///* update the video clock */
-			//frame_delay = av_q2d(codec_ctx->codec_ctx_->time_base);
-			///* if we are repeating a frame, adjust clock accordingly */
-			//frame_delay += pFrame->repeat_pict * (frame_delay * 0.5);
-			//video_pts += frame_delay;
-
-			//last_clock = video_pts;
+			video_pts = synchronize(codec_ctx, rgb_frame->frame_, video_pts);
 
 			VideoPackageInfo info;
-			info.data = rgb_frame_->data[0];
+			info.data = rgb_frame->frame_->data[0];
 			info.width = codec_ctx->codec_ctx_->width;
 			info.height = codec_ctx->codec_ctx_->height;
 			info.pts = video_pts;
 			info.clock = video_pts;
 			video_que_.push(info);
-			
-
-			//av_frame_unref(pFrame);
-		}
 	}
-
 }
-
-//double synchronize(AVFrame *srcFrame, double pts)
-//{
-//	double frame_delay;
-//
-//	if (pts != 0)
-//		video_clock = pts; // Get pts,then set video clock to it
-//	else
-//		pts = video_clock; // Don't get pts,set it to video clock
-//
-//	frame_delay = av_q2d(stream->codec->time_base);
-//	frame_delay += srcFrame->repeat_pict * (frame_delay * 0.5);
-//
-//	video_clock += frame_delay;
-//
-//	return pts;
-//}
