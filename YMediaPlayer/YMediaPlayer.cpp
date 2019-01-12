@@ -353,16 +353,16 @@ int YMediaPlayer::VideoPlayThread()
 			glTexImage2D(GL_TEXTURE_2D, 0,
 				GL_RGB,
 				info.width, info.height, 0,
-				GL_RGB, GL_UNSIGNED_BYTE, info.data);
+				GL_BGR, GL_UNSIGNED_BYTE, info.data);
 
 
 			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-			GLuint sampler_location;
+			//GLuint sampler_location;
 			glUseProgram(program);
-			sampler_location = glGetUniformLocation(program, "colorMap");
-			glUniform1i(sampler_location, 0);
+			//sampler_location = glGetUniformLocation(program, "colorMap");
+			//glUniform1i(sampler_location, 0);
 
 			glBindTexture(GL_TEXTURE_2D, TextureID);
 

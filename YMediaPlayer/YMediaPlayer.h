@@ -22,7 +22,9 @@
 #include "YMediaDecode.h"
 //#include "Shader.h"
 
-#define NUMBUFFERS              8
+#define NUMBUFFERS              4
+
+extern GLFWwindow  *g_hwnd;
  
 class YMediaPlayer
 {

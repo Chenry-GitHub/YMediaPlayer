@@ -5,30 +5,17 @@
 #define AUDIO_OUT_SAMPLE_RATE 44100
 #define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/
 #define AUDIO_OUT_CHANNEL 2
-GLFWwindow  *g_hwnd;
 
 
 
 YMediaDecode::YMediaDecode()
-	: call_back_(nullptr)
 {
 	is_need_stop_ = false;
-
-	//shader_ptr_ = new Shader("C:/vert.shr", "C:/frame.shr");
-	//
-
-
-	//shader_ptr_->Use();
 }
 
 YMediaDecode::~YMediaDecode()
 {
 
-}
-
-void YMediaDecode::SetPlayerCallBack(Player_CallBack call_back)
-{
-	call_back_ = call_back;
 }
 
 bool YMediaDecode::SetMedia(const std::string & path_file)
@@ -52,7 +39,6 @@ bool YMediaDecode::StopDecode()
 		decodec_thread_.join();//block here
 	}
 	EmptyAudioQue();
-	error_ = YMediaPlayerError::ERROR_NO_ERROR;
 	return true;
 }
 
@@ -130,8 +116,6 @@ void YMediaDecode::DecodecThread()
 	format_ctx_ = format;
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
-		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
-		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("InitFormatCtx Error\n");
 		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL, 0,0,ERROR_FILE_ERROR);
 		return;
@@ -142,8 +126,6 @@ void YMediaDecode::DecodecThread()
 	audio_codec_ = audio_ctx;
 	if (!audio_ctx->InitDecoder())
 	{
-		error_ = YMediaPlayerError::ERROR_FILE_ERROR;
-		_YMEDIA_CALLBACK(call_back_, MEDIA_ERROR, error_)
 		printf("audio_ctx.InitDecoder Error\n");
 		PushAudioQue(nullptr, 0, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,0, 0,ERROR_NO_QUIT);
 		return;
