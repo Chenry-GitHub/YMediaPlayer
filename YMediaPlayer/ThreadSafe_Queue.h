@@ -21,12 +21,15 @@ public:
 		m_queue.push(data);
 		m_data_cond.notify_one();
 	}
-	void WaitPop(T&t)
+	bool WaitPop(T&t)
 	{
 		unique_lock<mutex> ul(m_mut);
 		m_data_cond.wait(ul, [this] {return !m_queue.empty(); });
+		if (m_queue.empty())
+			return false;
 		t = m_queue.front();
 		m_queue.pop();
+		return true;
 	}
 	shared_ptr<T> WaitPop()
 	{
@@ -68,6 +71,11 @@ public:
 	{
 		lock_guard<mutex> lg(m_mut);
 		return m_queue.size();
+	}
+
+	void NotifyAll()
+	{
+		m_data_cond.notify_all();
 	}
 
 };

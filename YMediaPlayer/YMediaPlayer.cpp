@@ -108,8 +108,7 @@ YMediaPlayer::YMediaPlayer()
 
 	Stop();
 
-	audio_clock_ = 0.0f;
-	video_clock_ = 0.0f;
+
 }
 
 YMediaPlayer::~YMediaPlayer()
@@ -195,6 +194,9 @@ bool YMediaPlayer::Pause()
 
 bool YMediaPlayer::Stop()
 {
+	audio_clock_ = 0.0f;
+	video_clock_ = 0.0f;
+
 	is_prepare_ = false;
 	is_need_stop_ = true;
 	is_pause_ = true;
@@ -223,11 +225,11 @@ bool YMediaPlayer::IsPause()
 	return is_pause_;
 }
 
-DecodecError YMediaPlayer::FillAudioBuff(ALuint& buf)
+bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 {
 	AudioPackageInfo info= decoder_.PopAudioQue();
-	if (info .size <= 0 || info.error  != ERROR_NO_ERROR)
-		return info.error;
+	if (info .size <= 0)
+		return false;
 	audio_clock_ = info.pts;
 	audio_clock_ -= 0.026*NUMBUFFERS;
 	//printf("package pts:%d\n",info.pts);
@@ -237,7 +239,7 @@ DecodecError YMediaPlayer::FillAudioBuff(ALuint& buf)
 	alSourceQueueBuffers(source_id_, 1, &buf);
 	decoder_.FreeAudioPackageInfo(&info);
 
-	return ERROR_NO_ERROR;
+	return true;
 }
 
 int YMediaPlayer::AudioPlayThread()
@@ -246,7 +248,7 @@ int YMediaPlayer::AudioPlayThread()
 	//first time ,need to fill the Source
 	for (int i = 0; i < NUMBUFFERS; i++)
 	{
-		if (DecodecError::ERROR_NO_ERROR != FillAudioBuff(audio_buf_[i]))
+		if (!FillAudioBuff(audio_buf_[i]))
 		{
 			is_need_stop_ = true;
 			break;
@@ -275,7 +277,7 @@ int YMediaPlayer::AudioPlayThread()
 			ALuint bufferID = 0;
 			alSourceUnqueueBuffers(source_id_, 1, &bufferID);
 			//printf("bufferID:%d\n", bufferID);
-			if (DecodecError::ERROR_NO_ERROR != FillAudioBuff(bufferID))
+			if (!FillAudioBuff(bufferID))
 			{
 				break;
 			}
@@ -340,7 +342,7 @@ int YMediaPlayer::VideoPlayThread()
 
 	while (false == is_need_stop_)
 	{
-		VideoPackageInfo info = decoder_.PopVideoQue();
+		VideoPackageInfo info = decoder_.PopVideoQue(video_clock_);
 		if (!info.data)
 			continue;
 		video_clock_ = info.clock;
@@ -382,10 +384,10 @@ int YMediaPlayer::VideoPlayThread()
 
 void YMediaPlayer::synchronize_video()
 {
-	printf("%f,%f \n", video_clock_, audio_clock_);
+
 	while (false == is_need_stop_)
 	{
-		//printf("%f,%f \n", video_clock_,audio_clock_);
+		printf("%f,%f \n", video_clock_,audio_clock_);
 		if (video_clock_ <= audio_clock_)
 			break;
 		int delayTime = (video_clock_- audio_clock_) * 1000;

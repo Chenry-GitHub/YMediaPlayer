@@ -91,10 +91,7 @@ void YMediaDecode::EmptyVideoQue()
 	while (video_que_.GetSize() > 0)
 	{
 		VideoPackageInfo info;
-		if (video_que_.TryPop(info))
-		{
-			av_free(info.data);
-		}
+		video_que_.TryPop(info);
 	}
 }
 
@@ -113,13 +110,13 @@ AudioPackageInfo YMediaDecode::PopAudioQue()
 	return info;
 }
 
-VideoPackageInfo YMediaDecode::PopVideoQue()
+VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 {
 	VideoPackageInfo info;
 
 	AVPacket *packet;
 	video_inner_que_.WaitPop(packet);
-	DoConvertVideo(packet);
+	DoConvertVideo(packet, cur_clock);
 	av_packet_unref(packet);
 	av_packet_free(&packet);
 	video_que_.TryPop(info);
@@ -128,15 +125,7 @@ VideoPackageInfo YMediaDecode::PopVideoQue()
 
 void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, double dur, double pts, DecodecError error)
 {
-	AudioPackageInfo info;
-	info.data = data;
-	info.size = size;
-	info.dur = dur;
-	info.pts = pts;
-	info.sample_rate = sample_rate;
-	info.channels = channel;
-	info.error = error;
-	audio_que_.push(info);
+
 }
 
 void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
@@ -299,7 +288,16 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 		double dur = audio_frame->frame_->pkt_duration* av_q2d(codec_ctx->GetStream()->time_base);
 		double pts = audio_frame->frame_->pts *av_q2d(codec_ctx->GetStream()->time_base);
 		//printf("pts:pts:pts:%f\n",pts);
-		PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur, pts,ERROR_NO_ERROR);
+		
+		AudioPackageInfo info;
+		info.data = data;
+		info.size = Audiobuffer_size;
+		info.dur = dur;
+		info.pts = pts;
+		info.sample_rate = AUDIO_OUT_SAMPLE_RATE;
+		info.channels = AUDIO_OUT_CHANNEL;
+		audio_que_.push(info);
+
 		av_free(out_buffer);
 	}
 #else
@@ -377,9 +375,9 @@ void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
 	);
 	ReleaseDC(hWnd, hDC);
 }
-double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFrame, double pts)
+double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFrame, double pts, double cur_clock)
 {
-	static double video_clock = 0.0f;
+	double video_clock = cur_clock;
 	double frame_delay;
 	
 	if (pts != 0)
@@ -406,7 +404,7 @@ void YMediaDecode::NotifyDecodecStatus(DecodecStatus status)
 	}
 }
 
-void YMediaDecode::DoConvertVideo(AVPacket *pkg)
+void YMediaDecode::DoConvertVideo(AVPacket *pkg, double cur_clock)
 {
 	auto video_frame = video_frame_.lock();
 	auto codec_ctx = video_codec_.lock();
@@ -442,7 +440,7 @@ void YMediaDecode::DoConvertVideo(AVPacket *pkg)
 			}
 
 			video_pts *= av_q2d(codec_ctx->GetStream()->time_base);
-			video_pts = synchronize(codec_ctx, rgb_frame->frame_, video_pts);
+			video_pts = synchronize(codec_ctx, rgb_frame->frame_, video_pts, cur_clock);
 
 			VideoPackageInfo info;
 			info.data = rgb_frame->frame_->data[0];

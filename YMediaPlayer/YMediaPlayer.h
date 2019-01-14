@@ -46,7 +46,7 @@ public:
 
 	bool IsPause();
 
-	DecodecError FillAudioBuff(ALuint& buf);
+	bool FillAudioBuff(ALuint& buf);
 protected:
 	int  AudioPlayThread();
 

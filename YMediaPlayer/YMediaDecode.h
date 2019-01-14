@@ -99,7 +99,7 @@ public:
 
 	AudioPackageInfo PopAudioQue();//audio call back by multi-thread
 
-	VideoPackageInfo PopVideoQue(); //video call back by multi-thread
+	VideoPackageInfo PopVideoQue(double cur_clock); //video call back by multi-thread
 
 	void PushAudioQue(void *data,int size,int sample_rate,int channel, double dur, double pts, DecodecError error);
 
@@ -111,9 +111,9 @@ protected:
 
 	void DoConvertAudio(AVPacket *pkg);
 
-	void DoConvertVideo(AVPacket *pkg);
+	void DoConvertVideo(AVPacket *pkg,double cur_clock);
 
-	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts);
+	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts, double cur_clock);
 private:
 
 	void NotifyDecodecStatus(DecodecStatus);
