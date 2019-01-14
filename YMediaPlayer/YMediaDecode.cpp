@@ -54,7 +54,7 @@ bool YMediaDecode::StartDecode()
 
 void YMediaDecode::EmptyAudioQue()
 {
-	while (audio_inner_que_.GetSize()>0)
+	while (!audio_inner_que_.IsEmpty())
 	{
 		InnerPacketInfo pkg_info;
 		if (audio_inner_que_.TryPop(pkg_info))
@@ -64,7 +64,7 @@ void YMediaDecode::EmptyAudioQue()
 		}
 	}
 
-	while (audio_que_.GetSize()>0)
+	while (!audio_que_.IsEmpty())
 	{
 		AudioPackageInfo info;
 		if (audio_que_.TryPop(info))
@@ -79,7 +79,7 @@ void YMediaDecode::EmptyAudioQue()
 
 void YMediaDecode::EmptyVideoQue()
 {
-	while (video_inner_que_.GetSize() > 0)
+	while (!video_inner_que_.IsEmpty())
 	{
 		InnerPacketInfo pkg_info;
 		if (video_inner_que_.TryPop(pkg_info))
@@ -89,7 +89,7 @@ void YMediaDecode::EmptyVideoQue()
 		}
 	}
 
-	while (video_que_.GetSize() > 0)
+	while (!video_que_.IsEmpty())
 	{
 		VideoPackageInfo info;
 		video_que_.TryPop(info);
