@@ -123,10 +123,6 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 	return info;
 }
 
-void YMediaDecode::PushAudioQue(void *data, int size, int sample_rate, int channel, double dur, double pts, DecodecError error)
-{
-
-}
 
 void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
 {

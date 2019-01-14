@@ -14,6 +14,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <map>
 
 #include <glew.h>
 #include <glfw3.h>
@@ -67,6 +68,7 @@ private:
 	atomic_bool is_pause_;
 
 	ALuint audio_buf_[NUMBUFFERS];
+	std::map<ALuint, double> que_map_;
 
 	//为第一次执行
 	atomic_bool is_prepare_;

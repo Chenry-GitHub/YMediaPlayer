@@ -1,5 +1,9 @@
 ﻿#include "YMediaPlayer.h"
 
+#define CLEAR_MAP(map_ )  \
+for (auto iter = map_.begin(); iter != map_.end();)\
+	iter = map_.erase(iter);
+
 #include <glm.hpp>
 #include <ext.hpp>
 #include <glfw3.h>
@@ -214,7 +218,7 @@ bool YMediaPlayer::Stop()
 		audio_thread_.join(); //next time !block here! 
 	}
 
-	
+	CLEAR_MAP(que_map_);
 
 	decoder_.StopDecode();
 	return true;
@@ -230,15 +234,15 @@ bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 	AudioPackageInfo info= decoder_.PopAudioQue();
 	if (info .size <= 0)
 		return false;
-	audio_clock_ = info.pts;
-	audio_clock_ -= 0.026*NUMBUFFERS;
+	//audio_clock_ = info.pts;
+	//audio_clock_ -= 0.02612*(NUMBUFFERS-1);
 	//printf("package pts:%d\n",info.pts);
 	//printf("audio_clock:%f\n", info.clock);
 	ALenum fmt;
 	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, info.sample_rate);
 	alSourceQueueBuffers(source_id_, 1, &buf);
 	decoder_.FreeAudioPackageInfo(&info);
-
+	que_map_[buf] = info.pts;
 	return true;
 }
 
@@ -276,7 +280,9 @@ int YMediaPlayer::AudioPlayThread()
 		{
 			ALuint bufferID = 0;
 			alSourceUnqueueBuffers(source_id_, 1, &bufferID);
-			//printf("bufferID:%d\n", bufferID);
+			audio_clock_ = que_map_[bufferID];
+
+
 			if (!FillAudioBuff(bufferID))
 			{
 				break;
@@ -289,9 +295,7 @@ int YMediaPlayer::AudioPlayThread()
 int YMediaPlayer::VideoPlayThread()
 {
 	glfwMakeContextCurrent(g_hwnd);
-
-
-
+	
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
@@ -347,12 +351,7 @@ int YMediaPlayer::VideoPlayThread()
 			continue;
 		video_clock_ = info.clock;
 
-		//printf("%f,%f \n", video_clock_, audio_clock_);
 		synchronize_video();
-		//printf("%f,%f \n", video_clock_, audio_clock_);
-	//	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
-	//	printf("video_pts:%d\n", info.pts);
-
 
 		glTexImage2D(GL_TEXTURE_2D, 0,
 			GL_RGB,

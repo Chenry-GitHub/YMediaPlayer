@@ -101,8 +101,6 @@ public:
 
 	VideoPackageInfo PopVideoQue(double cur_clock); //video call back by multi-thread
 
-	void PushAudioQue(void *data,int size,int sample_rate,int channel, double dur, double pts, DecodecError error);
-
 	void FreeAudioPackageInfo(AudioPackageInfo*);
 
 protected:
