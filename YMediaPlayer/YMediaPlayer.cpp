@@ -229,7 +229,7 @@ bool YMediaPlayer::IsPause()
 bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 {
 	AudioPackageInfo info= decoder_.PopAudioQue();
-	if (info .size <= 0)
+	if (info.error!= ERROR_NO_ERROR)
 		return false;
 	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, info.sample_rate);
 	alSourceQueueBuffers(source_id_, 1, &buf);
@@ -272,7 +272,6 @@ int YMediaPlayer::AudioPlayThread()
 			ALuint bufferID = 0;
 			alSourceUnqueueBuffers(source_id_, 1, &bufferID);
 			audio_clock_ = que_map_[bufferID];
-
 
 			if (!FillAudioBuff(bufferID))
 			{
@@ -345,7 +344,7 @@ int YMediaPlayer::VideoPlayThread()
 	while (false == is_need_stop_)
 	{
 		VideoPackageInfo info = decoder_.PopVideoQue(video_clock_);
-		if (!info.data)
+		if (info.error != ERROR_NO_ERROR)
 			continue;
 		video_clock_ = info.clock;
 
@@ -396,11 +395,16 @@ void YMediaPlayer::synchronize_video()
 
 void YMediaPlayer::OnDecodecError(DecodecError error)
 {
-	while (audio_thread_runing_ || video_thread_runing_)
+	while(audio_thread_runing_)
 	{
-		decoder_.ConductBlocking();
+		decoder_.ConductAudioBlocking();
 	}
-	//Stop();
+
+	while(video_thread_runing_)
+	{
+		decoder_.ConductVideoBlocking();
+	}
+	printf("OnDecodecError  finished\n");
 }
 
 void YMediaPlayer::OnMediaInfo(MediaInfo info)

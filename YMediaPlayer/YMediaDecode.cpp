@@ -102,9 +102,9 @@ AudioPackageInfo YMediaDecode::PopAudioQue()
 	
 	InnerPacketInfo pkg_info;
 	audio_inner_que_.WaitPop(pkg_info);
-	if ( pkg_info.flag ==1 )
+	if (FLAG_CONDUCT_QUE == pkg_info.flag )
 	{
-		info.error = 1;
+		info.error = ERROR_QUE_BLOCK;
 	}
 	else
 	{
@@ -123,9 +123,9 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 	VideoPackageInfo info;
 	InnerPacketInfo pkg_info;
 	video_inner_que_.WaitPop(pkg_info);
-	if (pkg_info.flag == 1)
+	if (FLAG_CONDUCT_QUE == pkg_info.flag )
 	{
-		info.error = 1;
+		info.error = ERROR_QUE_BLOCK;
 	}
 	else
 	{
@@ -146,17 +146,19 @@ void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
 }
 
 
-void YMediaDecode::ConductBlocking()
+void YMediaDecode::ConductAudioBlocking()
 {
 	InnerPacketInfo info_audio;
 	info_audio.pkg = av_packet_alloc();
-	info_audio.flag = 1;
+	info_audio.flag = FLAG_CONDUCT_QUE;
 	audio_inner_que_.push(info_audio);
+}
 
-
+void YMediaDecode::ConductVideoBlocking()
+{
 	InnerPacketInfo info_video;
 	info_video.pkg = av_packet_alloc();
-	info_audio.flag = 1;
+	info_video.flag = FLAG_CONDUCT_QUE;
 	video_inner_que_.push(info_video);
 }
 
@@ -332,6 +334,7 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 		info.pts = pts;
 		info.sample_rate = AUDIO_OUT_SAMPLE_RATE;
 		info.channels = AUDIO_OUT_CHANNEL;
+		info.error = ERROR_NO_ERROR;
 		audio_que_.push(info);
 
 		av_free(out_buffer);
@@ -485,6 +488,7 @@ void YMediaDecode::DoConvertVideo(AVPacket *pkg, double cur_clock)
 			info.height = codec_ctx->codec_ctx_->height;
 			info.pts = video_pts;
 			info.clock = video_pts;
+			info.error = ERROR_NO_ERROR;
 			video_que_.push(info);
 	}
 }

@@ -78,7 +78,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		static int i = 0;
 		if (i++ % 2)
 		{
-			g_player->SetMediaFromFile("D:\\video4.mp4");
+			g_player->SetMediaFromFile("D:\\video22.mp4");
 			g_player->Play();
 		}
 		else

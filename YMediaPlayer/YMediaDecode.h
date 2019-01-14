@@ -39,6 +39,7 @@ enum DecodecError
 	ERROR_NO_ERROR = 0,
 	ERROR_NO_QUIT,
 	ERROR_FILE_ERROR,
+	ERROR_QUE_BLOCK,
 };
 
 struct MediaInfo
@@ -54,7 +55,7 @@ struct VideoPackageInfo
 	int height;
 	double pts;
 	double clock;
-	int error;
+	DecodecError error  = ERROR_NO_ERROR;
 };
 
 
@@ -66,12 +67,21 @@ struct AudioPackageInfo
 	double dur;
 	int sample_rate;
 	int channels;
-	int error;
+	DecodecError error = ERROR_NO_ERROR;
 };
 
+
+//flag:0 no error
+//flag:1 conduct block queue
+
+enum FLAG_PKG {
+	FLAG_DEFAULT=0,
+	FLAG_CONDUCT_QUE,
+	FLAG_SEEK,
+};
 struct InnerPacketInfo {
 	AVPacket *pkg;
-	int flag;
+	FLAG_PKG flag= FLAG_DEFAULT;
 };
 
 
@@ -102,7 +112,9 @@ public:
 
 	void FreeAudioPackageInfo(AudioPackageInfo*);
 
-	void ConductBlocking();
+	void ConductAudioBlocking();
+
+	void ConductVideoBlocking();
 
 	void SetErrorFunction(std::function<void(DecodecError)> error_func);
 
