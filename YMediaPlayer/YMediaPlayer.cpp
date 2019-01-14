@@ -234,11 +234,6 @@ bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 	AudioPackageInfo info= decoder_.PopAudioQue();
 	if (info .size <= 0)
 		return false;
-	//audio_clock_ = info.pts;
-	//audio_clock_ -= 0.02612*(NUMBUFFERS-1);
-	//printf("package pts:%d\n",info.pts);
-	//printf("audio_clock:%f\n", info.clock);
-	ALenum fmt;
 	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, info.sample_rate);
 	alSourceQueueBuffers(source_id_, 1, &buf);
 	decoder_.FreeAudioPackageInfo(&info);
