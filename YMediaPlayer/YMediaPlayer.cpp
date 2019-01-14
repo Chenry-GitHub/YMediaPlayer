@@ -113,6 +113,8 @@ YMediaPlayer::YMediaPlayer()
 	Stop();
 
 
+	decoder_.SetErrorFunction(std::bind(&YMediaPlayer::OnDecodecError,this, std::placeholders::_1));
+	decoder_.SetMediaFunction(std::bind(&YMediaPlayer::OnMediaInfo, this, std::placeholders::_1));
 }
 
 YMediaPlayer::~YMediaPlayer()
@@ -163,14 +165,10 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 	printf("decoder_.SetMedia\n");
 
 	audio_thread_ = std::move(std::thread(&YMediaPlayer::AudioPlayThread, this));
-
+	
 	//TODO
 	video_thread_ = std::move(std::thread(&YMediaPlayer::VideoPlayThread, this));
 
-	while (!is_prepare_)//wait for buffer file buff done!
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
 
 	printf("SetMediaFromFile\n");
 	return true;
@@ -201,7 +199,6 @@ bool YMediaPlayer::Stop()
 	audio_clock_ = 0.0f;
 	video_clock_ = 0.0f;
 
-	is_prepare_ = false;
 	is_need_stop_ = true;
 	is_pause_ = true;
 
@@ -244,6 +241,7 @@ bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 int YMediaPlayer::AudioPlayThread()
 {
 	is_need_stop_ = false;
+	audio_thread_runing_ = true;
 	//first time ,need to fill the Source
 	for (int i = 0; i < NUMBUFFERS; i++)
 	{
@@ -253,8 +251,6 @@ int YMediaPlayer::AudioPlayThread()
 			break;
 		}
 	}
-
-	is_prepare_ = true;
 
 	while ( false == is_need_stop_)
 	{
@@ -283,12 +279,19 @@ int YMediaPlayer::AudioPlayThread()
 				break;
 			}
 		}
+
+		if (media_info_.dur <= audio_clock_)
+		{
+			break;
+		}
 	}
+	audio_thread_runing_ = false;
 	return true;
 }
 
 int YMediaPlayer::VideoPlayThread()
 {
+	video_thread_runing_ = true;
 	glfwMakeContextCurrent(g_hwnd);
 	
 	glGenVertexArrays(1, &vao);
@@ -373,12 +376,12 @@ int YMediaPlayer::VideoPlayThread()
 	}
 
 	glfwMakeContextCurrent(NULL);
+	video_thread_runing_ = false;
 	return 1;
 }
 
 void YMediaPlayer::synchronize_video()
 {
-
 	while (false == is_need_stop_)
 	{
 		printf("%f,%f \n", video_clock_,audio_clock_);
@@ -389,4 +392,18 @@ void YMediaPlayer::synchronize_video()
 	//	printf("dealy time:%d\n",delayTime);
 		std::this_thread::sleep_for(std::chrono::milliseconds(delayTime));
 	}
+}
+
+void YMediaPlayer::OnDecodecError(DecodecError error)
+{
+	while (audio_thread_runing_ || video_thread_runing_)
+	{
+		decoder_.ConductBlocking();
+	}
+	//Stop();
+}
+
+void YMediaPlayer::OnMediaInfo(MediaInfo info)
+{
+	media_info_ = info;
 }

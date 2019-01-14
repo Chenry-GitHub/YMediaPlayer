@@ -54,14 +54,21 @@ protected:
 	int VideoPlayThread();
 
 	void synchronize_video();
+
+	void OnDecodecError(DecodecError error);
+
+	void OnMediaInfo(MediaInfo info);
 private:
 	std::string path_file_;
 	ALuint		source_id_;
-
+	MediaInfo media_info_;
 	YMediaDecode  decoder_;
 
 	std::thread audio_thread_;
 	std::thread video_thread_;
+
+	atomic_bool audio_thread_runing_;
+	atomic_bool video_thread_runing_;
 
 	atomic_bool is_need_stop_;
 
@@ -69,9 +76,6 @@ private:
 
 	ALuint audio_buf_[NUMBUFFERS];
 	std::map<ALuint, double> que_map_;
-
-	//为第一次执行
-	atomic_bool is_prepare_;
 	
 	//this is for synchronization
 	double audio_clock_;

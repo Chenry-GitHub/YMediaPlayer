@@ -41,14 +41,11 @@ enum DecodecError
 	ERROR_FILE_ERROR,
 };
 
-struct DecodecStatus
+struct MediaInfo
 {
-	DecodecError error;
+	double dur;
 	
 };
-
-
-
 
 struct VideoPackageInfo
 {
@@ -57,6 +54,7 @@ struct VideoPackageInfo
 	int height;
 	double pts;
 	double clock;
+	int error;
 };
 
 
@@ -68,13 +66,14 @@ struct AudioPackageInfo
 	double dur;
 	int sample_rate;
 	int channels;
-	DecodecError error = ERROR_NO_ERROR;
+	int error;
 };
 
+struct InnerPacketInfo {
+	AVPacket *pkg;
+	int flag;
+};
 
-using Player_CallBack = void(*) (LPARAM lp, WPARAM wp);
-
-#define _YMEDIA_CALLBACK(callback, val1 ,val2) if(callback){ callback(val1,val2); }
 
 class FormatCtx;
 class CodecCtx;
@@ -103,6 +102,11 @@ public:
 
 	void FreeAudioPackageInfo(AudioPackageInfo*);
 
+	void ConductBlocking();
+
+	void SetErrorFunction(std::function<void(DecodecError)> error_func);
+
+	void SetMediaFunction(std::function<void(MediaInfo)> func);
 protected:
 
 	void DecodecThread();
@@ -112,9 +116,12 @@ protected:
 	void DoConvertVideo(AVPacket *pkg,double cur_clock);
 
 	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts, double cur_clock);
+
 private:
 
-	void NotifyDecodecStatus(DecodecStatus);
+	void NotifyDecodecStatus(DecodecError);
+
+	void NotifyMediaInfo(MediaInfo info);
 
 	std::string path_file_;
 
@@ -125,8 +132,8 @@ private:
 	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
 	ThreadSafe_Queue<VideoPackageInfo> video_que_;
 
-	ThreadSafe_Queue<AVPacket*> audio_inner_que_;
-	ThreadSafe_Queue<AVPacket*> video_inner_que_;
+	ThreadSafe_Queue<InnerPacketInfo> audio_inner_que_;
+	ThreadSafe_Queue<InnerPacketInfo> video_inner_que_;
 
 	std::weak_ptr<FormatCtx>		format_ctx_;
 	std::weak_ptr<CodecCtx>		audio_codec_;
@@ -140,7 +147,9 @@ private:
 
 	std::weak_ptr<AVFrameManger> rgb_frame_;
 
-	std::function<void (DecodecStatus)> status_func_;
+	std::function<void (DecodecError)> error_func_;
+
+	std::function<void(MediaInfo)> media_func_;
 };
 
 
