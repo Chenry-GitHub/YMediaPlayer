@@ -54,7 +54,7 @@ int main(int argc, _TCHAR* argv[])
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
 	g_player = &player;
-	player.SetMediaFromFile("D:\\video.mp4");
+	player.SetMediaFromFile("C:\\audio5d.mp3");
 	player.Play();
 
 						  // Game loop

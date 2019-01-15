@@ -256,7 +256,7 @@ public:
 		if (ret < 0) {
 			/*	fprintf(stderr, "Could not find %s stream in input file '%s'\n",
 			av_get_media_type_string(type), src_filename);*/
-			return ret;
+			return false;
 		}
 		else {
 			stream_index = ret;
@@ -267,7 +267,7 @@ public:
 			if (!dec) {
 				fprintf(stderr, "Failed to find %s codec\n",
 					av_get_media_type_string(type_));
-				return AVERROR(EINVAL);
+				return false;
 			}
 
 			/* Allocate a codec context for the decoder */
@@ -275,14 +275,14 @@ public:
 			if (!codec_ctx_) {
 				fprintf(stderr, "Failed to allocate the %s codec context\n",
 					av_get_media_type_string(type_));
-				return AVERROR(ENOMEM);
+				return false;
 			}
 
 			/* Copy codec parameters from input stream to output codec context */
 			if ((ret = avcodec_parameters_to_context(codec_ctx_, st->codecpar)) < 0) {
 				fprintf(stderr, "Failed to copy %s codec parameters to decoder context\n",
 					av_get_media_type_string(type_));
-				return ret;
+				return false;
 			}
 
 			/* Init the decoders, with or without reference counting */
@@ -290,9 +290,10 @@ public:
 			if ((ret = avcodec_open2(codec_ctx_, dec, &opts)) < 0) {
 				fprintf(stderr, "Failed to open %s codec\n",
 					av_get_media_type_string(type_));
-				return ret;
+				return false;
 			}
 			stream_index_ = stream_index;
+			return true;
 		}
 	}
 
