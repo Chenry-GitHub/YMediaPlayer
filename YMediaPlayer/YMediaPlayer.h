@@ -55,7 +55,7 @@ protected:
 
 	void synchronize_video();
 
-	void OnDecodecError(DecodecError error);
+	void OnDecodeError(DecodeError error);
 
 	void OnMediaInfo(MediaInfo info);
 private:

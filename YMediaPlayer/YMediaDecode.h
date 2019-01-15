@@ -34,7 +34,7 @@ enum YMediaCallBackType
 	MEDIA_ERROR,
 };
 
-enum DecodecError
+enum DecodeError
 {
 	ERROR_NO_ERROR = 0,
 	ERROR_NO_QUIT,
@@ -55,7 +55,7 @@ struct VideoPackageInfo
 	int height;
 	double pts;
 	double clock;
-	DecodecError error  = ERROR_NO_ERROR;
+	DecodeError error  = ERROR_NO_ERROR;
 };
 
 
@@ -67,7 +67,7 @@ struct AudioPackageInfo
 	double dur;
 	int sample_rate;
 	int channels;
-	DecodecError error = ERROR_NO_ERROR;
+	DecodeError error = ERROR_NO_ERROR;
 };
 
 
@@ -116,12 +116,12 @@ public:
 
 	void ConductVideoBlocking();
 
-	void SetErrorFunction(std::function<void(DecodecError)> error_func);
+	void SetErrorFunction(std::function<void(DecodeError)> error_func);
 
 	void SetMediaFunction(std::function<void(MediaInfo)> func);
 protected:
 
-	void DecodecThread();
+	void DecodeThread();
 
 	void DoConvertAudio(AVPacket *pkg);
 
@@ -131,15 +131,15 @@ protected:
 
 private:
 
-	void NotifyDecodecStatus(DecodecError);
+	void NotifyDecodeStatus(DecodeError);
 
 	void NotifyMediaInfo(MediaInfo info);
 
 	std::string path_file_;
 
-	std::thread decodec_thread_;
+	std::thread decode_thread_;
 
-	atomic_bool is_need_stop_;
+	atomic_bool is_manual_stop_;
 
 	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
 	ThreadSafe_Queue<VideoPackageInfo> video_que_;
@@ -159,7 +159,7 @@ private:
 
 	std::weak_ptr<AVFrameManger> rgb_frame_;
 
-	std::function<void (DecodecError)> error_func_;
+	std::function<void (DecodeError)> error_func_;
 
 	std::function<void(MediaInfo)> media_func_;
 };

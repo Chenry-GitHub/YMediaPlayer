@@ -35,9 +35,9 @@ bool YMediaDecode::Pause()
 bool YMediaDecode::StopDecode()
 {
 	is_manual_stop_ = true;
-	if (decodec_thread_.joinable())
+	if (decode_thread_.joinable())
 	{
-		decodec_thread_.join();//block here
+		decode_thread_.join();//block here
 	}
 	EmptyAudioQue();
 	EmptyVideoQue();
@@ -46,8 +46,8 @@ bool YMediaDecode::StopDecode()
 
 bool YMediaDecode::StartDecode()
 {
-	//YMediaDecode::DecodecThread();
-	decodec_thread_ = std::move(std::thread(&YMediaDecode::DecodecThread, this));
+	//YMediaDecode::DecodeThread();
+	decode_thread_ = std::move(std::thread(&YMediaDecode::DecodeThread, this));
 	return true;
 }
 
@@ -162,7 +162,7 @@ void YMediaDecode::ConductVideoBlocking()
 	video_inner_que_.push(info_video);
 }
 
-void YMediaDecode::SetErrorFunction(std::function<void(DecodecError)> error_func)
+void YMediaDecode::SetErrorFunction(std::function<void(DecodeError)> error_func)
 {
 	error_func_ = error_func;
 }
@@ -172,7 +172,7 @@ void YMediaDecode::SetMediaFunction(std::function<void(MediaInfo)> func)
 	media_func_ = func;
 }
 
-void YMediaDecode::DecodecThread()
+void YMediaDecode::DecodeThread()
 {
 	is_manual_stop_ = false;
 	audio_convert_ctx_ = nullptr;
@@ -184,7 +184,7 @@ void YMediaDecode::DecodecThread()
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
 		printf("InitFormatCtx Error\n");
-		NotifyDecodecStatus(ERROR_FILE_ERROR);
+		NotifyDecodeStatus(ERROR_FILE_ERROR);
 		return;
 	}
 
@@ -203,7 +203,7 @@ void YMediaDecode::DecodecThread()
 	if (!audio_ctx->InitDecoder())
 	{
 		printf("audio_ctx.InitDecoder Error\n");
-		NotifyDecodecStatus(ERROR_NO_QUIT);
+		NotifyDecodeStatus(ERROR_NO_QUIT);
 		return;
 	}
 	else
@@ -233,7 +233,7 @@ void YMediaDecode::DecodecThread()
 	if (!video_ctx->InitDecoder())
 	{
 		printf("video_ctx.InitDecoder Error\n");
-		//NotifyDecodecStatus();
+		//NotifyDecodeStatus();
 	}
 	else
 	{
@@ -269,7 +269,7 @@ void YMediaDecode::DecodecThread()
 		format->release_package();
 	}
 
-	while (!is_manual_stop_ && !audio_inner_que_.IsEmpty())
+	while (!is_manual_stop_ && (!audio_inner_que_.IsEmpty() || !video_inner_que_.IsEmpty()||!audio_que_.IsEmpty()||!video_que_.IsEmpty()))
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
@@ -440,7 +440,7 @@ double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFr
 	return video_clock;
 }
 
-void YMediaDecode::NotifyDecodecStatus(DecodecError error)
+void YMediaDecode::NotifyDecodeStatus(DecodeError error)
 {
 	if (error_func_)
 		error_func_(error);
