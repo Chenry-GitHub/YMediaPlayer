@@ -189,7 +189,7 @@ bool YMediaPlayer::Play()
 
 bool YMediaPlayer::Pause()
 {
-	is_need_stop_ = false;
+	is_manual_stop_ = false;
 	is_pause_ = true;
 	return true;
 }
@@ -199,7 +199,7 @@ bool YMediaPlayer::Stop()
 	audio_clock_ = 0.0f;
 	video_clock_ = 0.0f;
 
-	is_need_stop_ = true;
+	is_manual_stop_ = true;
 	is_pause_ = true;
 
 	alSourceStop(source_id_);
@@ -207,11 +207,13 @@ bool YMediaPlayer::Stop()
 
 	if (video_thread_.joinable())
 	{
+		decoder_.ConductVideoBlocking();
 		video_thread_.join();
 	}
 
 	if (audio_thread_.joinable())
 	{
+		decoder_.ConductAudioBlocking();
 		audio_thread_.join(); //next time !block here! 
 	}
 
@@ -240,19 +242,18 @@ bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 
 int YMediaPlayer::AudioPlayThread()
 {
-	is_need_stop_ = false;
-	audio_thread_runing_ = true;
+	is_manual_stop_ = false;
 	//first time ,need to fill the Source
 	for (int i = 0; i < NUMBUFFERS; i++)
 	{
 		if (!FillAudioBuff(audio_buf_[i]))
 		{
-			is_need_stop_ = true;
+			is_manual_stop_ = true;
 			break;
 		}
 	}
 
-	while ( false == is_need_stop_)
+	while ( false == is_manual_stop_)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
@@ -275,7 +276,7 @@ int YMediaPlayer::AudioPlayThread()
 
 			if (!FillAudioBuff(bufferID))
 			{
-				break;
+				continue;
 			}
 		}
 
@@ -284,13 +285,11 @@ int YMediaPlayer::AudioPlayThread()
 			break;
 		}
 	}
-	audio_thread_runing_ = false;
 	return true;
 }
 
 int YMediaPlayer::VideoPlayThread()
 {
-	video_thread_runing_ = true;
 	glfwMakeContextCurrent(g_hwnd);
 	
 	glGenVertexArrays(1, &vao);
@@ -341,7 +340,7 @@ int YMediaPlayer::VideoPlayThread()
 
 	glLinkProgram(program);
 
-	while (false == is_need_stop_)
+	while (false == is_manual_stop_)
 	{
 		VideoPackageInfo info = decoder_.PopVideoQue(video_clock_);
 		if (info.error != ERROR_NO_ERROR)
@@ -375,15 +374,14 @@ int YMediaPlayer::VideoPlayThread()
 	}
 
 	glfwMakeContextCurrent(NULL);
-	video_thread_runing_ = false;
 	return 1;
 }
 
 void YMediaPlayer::synchronize_video()
 {
-	while (false == is_need_stop_)
+	while (false == is_manual_stop_)
 	{
-		printf("%f,%f \n", video_clock_,audio_clock_);
+//		printf("%f,%f \n", video_clock_,audio_clock_);
 		if (video_clock_ <= audio_clock_)
 			break;
 		int delayTime = (video_clock_- audio_clock_) * 1000;
@@ -395,19 +393,20 @@ void YMediaPlayer::synchronize_video()
 
 void YMediaPlayer::OnDecodecError(DecodecError error)
 {
-	while(audio_thread_runing_)
-	{
-		decoder_.ConductAudioBlocking();
-	}
+	//while(audio_thread_runing_)
+	//{
+	//	decoder_.ConductAudioBlocking();
+	//}
 
-	while(video_thread_runing_)
-	{
-		decoder_.ConductVideoBlocking();
-	}
-	printf("OnDecodecError  finished\n");
+	//while(video_thread_runing_)
+	//{
+	//	decoder_.ConductVideoBlocking();
+	//}
+	printf("OnDecodecError  finished %d\n", error);
 }
 
 void YMediaPlayer::OnMediaInfo(MediaInfo info)
 {
 	media_info_ = info;
+	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
 }

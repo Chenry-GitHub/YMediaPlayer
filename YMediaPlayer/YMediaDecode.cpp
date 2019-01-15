@@ -141,7 +141,7 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 
 void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
 {
-	if (info->data)
+	if (info->error == ERROR_NO_ERROR)
 		av_free(info->data);
 }
 

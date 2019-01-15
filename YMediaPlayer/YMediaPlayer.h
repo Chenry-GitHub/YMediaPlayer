@@ -67,9 +67,6 @@ private:
 	std::thread audio_thread_;
 	std::thread video_thread_;
 
-	atomic_bool audio_thread_runing_;
-	atomic_bool video_thread_runing_;
-
 	atomic_bool is_need_stop_;
 
 	atomic_bool is_pause_;
