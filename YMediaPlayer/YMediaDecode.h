@@ -229,6 +229,7 @@ public:
 		:format_(format_ctx)
 		, codec_ctx_(nullptr)
 		, type_(type)
+		, stream_index_(-1)
 	{
 
 	}
@@ -300,6 +301,11 @@ public:
 	AVStream *GetStream()
 	{
 		return format_->streams[stream_index_];
+	}
+
+	bool IsValid()
+	{
+		return stream_index_ >= 0;
 	}
 
 	AVFormatContext *format_;

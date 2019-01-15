@@ -256,16 +256,22 @@ void YMediaDecode::DecodeThread()
 		//seek operation
 		if (is_seek_)
 		{
-			long long audio_pos = av_rescale_q(seek_time_, { 1, AV_TIME_BASE }, audio_ctx->GetStream()->time_base);
-			if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_pos, AVSEEK_FLAG_BACKWARD) >= 0)
+			if (audio_ctx->IsValid())
 			{
-				EmptyAudioQue();
+				long long audio_pos = av_rescale_q(seek_time_, { 1, AV_TIME_BASE }, audio_ctx->GetStream()->time_base);
+				if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_pos, AVSEEK_FLAG_BACKWARD) >= 0)
+				{
+					EmptyAudioQue();
+				}
 			}
-
-			long long video_pos = av_rescale_q(seek_time_, { 1, AV_TIME_BASE }, video_ctx->GetStream()->time_base);
-			if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_pos, AVSEEK_FLAG_BACKWARD) >=0)
+			
+			if (video_ctx->IsValid())
 			{
-				EmptyVideoQue();
+				long long video_pos = av_rescale_q(seek_time_, { 1, AV_TIME_BASE }, video_ctx->GetStream()->time_base);
+				if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_pos, AVSEEK_FLAG_BACKWARD) >= 0)
+				{
+					EmptyVideoQue();
+				}
 			}
 			is_seek_ = false;
 		}
