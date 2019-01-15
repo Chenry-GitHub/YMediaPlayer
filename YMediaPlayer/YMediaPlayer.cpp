@@ -113,7 +113,7 @@ YMediaPlayer::YMediaPlayer()
 	Stop();
 
 
-	decoder_.SetErrorFunction(std::bind(&YMediaPlayer::OnDecodecError,this, std::placeholders::_1));
+	decoder_.SetErrorFunction(std::bind(&YMediaPlayer::OnDecodeError,this, std::placeholders::_1));
 	decoder_.SetMediaFunction(std::bind(&YMediaPlayer::OnMediaInfo, this, std::placeholders::_1));
 }
 
@@ -391,7 +391,7 @@ void YMediaPlayer::synchronize_video()
 	}
 }
 
-void YMediaPlayer::OnDecodecError(DecodecError error)
+void YMediaPlayer::OnDecodeError(DecodeError error)
 {
 	//while(audio_thread_runing_)
 	//{
@@ -402,7 +402,7 @@ void YMediaPlayer::OnDecodecError(DecodecError error)
 	//{
 	//	decoder_.ConductVideoBlocking();
 	//}
-	printf("OnDecodecError  finished %d\n", error);
+	printf("OnDecodeError  finished %d\n", error);
 }
 
 void YMediaPlayer::OnMediaInfo(MediaInfo info)

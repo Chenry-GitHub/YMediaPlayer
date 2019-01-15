@@ -11,7 +11,7 @@
 
 YMediaDecode::YMediaDecode()
 {
-	is_need_stop_ = false;
+	is_manual_stop_ = false;
 }
 
 YMediaDecode::~YMediaDecode()
@@ -34,7 +34,7 @@ bool YMediaDecode::Pause()
 
 bool YMediaDecode::StopDecode()
 {
-	is_need_stop_ = true;
+	is_manual_stop_ = true;
 	if (decodec_thread_.joinable())
 	{
 		decodec_thread_.join();//block here
@@ -174,7 +174,7 @@ void YMediaDecode::SetMediaFunction(std::function<void(MediaInfo)> func)
 
 void YMediaDecode::DecodecThread()
 {
-	is_need_stop_ = false;
+	is_manual_stop_ = false;
 	audio_convert_ctx_ = nullptr;
 	video_convert_ctx_ = nullptr;
 	uint8_t* pic_buff=nullptr;
@@ -244,7 +244,7 @@ void YMediaDecode::DecodecThread()
 	}
 		
 	
-	while (!is_need_stop_)
+	while (!is_manual_stop_)
 	{
 		if (!format->read())
 		{
@@ -269,7 +269,7 @@ void YMediaDecode::DecodecThread()
 		format->release_package();
 	}
 
-	while (!is_need_stop_ && audio_inner_que_.GetSize())
+	while (!is_manual_stop_ && !audio_inner_que_.IsEmpty())
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
