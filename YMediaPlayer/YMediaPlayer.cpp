@@ -240,6 +240,13 @@ bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 	return true;
 }
 
+void YMediaPlayer::Seek(float pos)
+{
+	decoder_.SeekPos(media_info_.dur*pos*1000000);
+	audio_clock_ = media_info_.dur*pos;
+	video_clock_ = media_info_.dur*pos;
+}
+
 int YMediaPlayer::AudioPlayThread()
 {
 	is_manual_stop_ = false;

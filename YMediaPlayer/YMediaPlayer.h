@@ -48,6 +48,8 @@ public:
 	bool IsPause();
 
 	bool FillAudioBuff(ALuint& buf);
+
+	void Seek(float pos);
 protected:
 	int  AudioPlayThread();
 

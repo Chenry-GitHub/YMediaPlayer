@@ -106,6 +106,8 @@ public:
 
 	void EmptyVideoQue();
 
+	void SeekPos(double pos);
+
 	AudioPackageInfo PopAudioQue();//audio call back by multi-thread
 
 	VideoPackageInfo PopVideoQue(double cur_clock); //video call back by multi-thread
@@ -140,6 +142,9 @@ private:
 	std::thread decode_thread_;
 
 	atomic_bool is_manual_stop_;
+
+	atomic_bool is_seek_;
+	double seek_time_;
 
 	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
 	ThreadSafe_Queue<VideoPackageInfo> video_que_;
@@ -201,6 +206,11 @@ public:
 
 	inline bool read() {
 		return  av_read_frame(ctx_, pkg_) >= 0;
+	}
+
+	inline bool seek()
+	{
+
 	}
 
 	void release_package()

@@ -96,6 +96,12 @@ void YMediaDecode::EmptyVideoQue()
 	}
 }
 
+void YMediaDecode::SeekPos(double pos)
+{
+	is_seek_ = true;
+	seek_time_ = pos;
+}
+
 AudioPackageInfo YMediaDecode::PopAudioQue()
 {
 	AudioPackageInfo info;
@@ -174,6 +180,7 @@ void YMediaDecode::SetMediaFunction(std::function<void(MediaInfo)> func)
 
 void YMediaDecode::DecodeThread()
 {
+	is_seek_ = false;
 	is_manual_stop_ = false;
 	audio_convert_ctx_ = nullptr;
 	video_convert_ctx_ = nullptr;
@@ -246,10 +253,27 @@ void YMediaDecode::DecodeThread()
 	
 	while (!is_manual_stop_)
 	{
+		//seek operation
+		if (is_seek_)
+		{
+			long long audio_pos = av_rescale_q(seek_time_, { 1, AV_TIME_BASE }, audio_ctx->GetStream()->time_base);
+			if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_pos, AVSEEK_FLAG_BACKWARD) >= 0)
+			{
+				EmptyAudioQue();
+			}
+
+			long long video_pos = av_rescale_q(seek_time_, { 1, AV_TIME_BASE }, video_ctx->GetStream()->time_base);
+			if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_pos, AVSEEK_FLAG_BACKWARD) >=0)
+			{
+				EmptyVideoQue();
+			}
+			is_seek_ = false;
+		}
+		//end seek operation
 		if (!format->read())
 		{
 			printf("av_read_frame Read Done!\n");
-			break;
+			continue;
 		}
 		if (format->pkg_->stream_index == audio_ctx->stream_index_)
 		{
