@@ -275,13 +275,21 @@ void YMediaDecode::DecodecThread()
 	}
 
 	printf("After while\n");
-	/* flush the decoder */
+	/* flush the audio decoder */
 	if (audio_ctx->codec_ctx_)
 	{
 		format->pkg_->size = 0;
 		format->pkg_->data = nullptr;
 		DoConvertAudio(format->pkg_);
 	}
+	/* flush the video decoder */
+	if (video_ctx->codec_ctx_)
+	{
+		format->pkg_->size = 0;
+		format->pkg_->data = nullptr;
+		DoConvertVideo(format->pkg_,0);
+	}
+
 	swr_free(&audio_convert_ctx_);
 	sws_freeContext(video_convert_ctx_);
 	av_free(pic_buff);
