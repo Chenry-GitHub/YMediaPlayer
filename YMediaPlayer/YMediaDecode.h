@@ -88,6 +88,8 @@ struct InnerPacketInfo {
 class FormatCtx;
 class CodecCtx;
 class AVFrameManger;
+class AudioConvertManger;
+class VideoConvertManger;
 class YMediaDecode
 {
 public:
@@ -121,6 +123,8 @@ public:
 	void SetErrorFunction(std::function<void(DecodeError)> error_func);
 
 	void SetMediaFunction(std::function<void(MediaInfo)> func);
+
+	void IsDecodeDone();
 protected:
 
 	void DecodeThread();
@@ -156,13 +160,14 @@ private:
 	std::weak_ptr<CodecCtx>		audio_codec_;
 	std::weak_ptr<CodecCtx>		video_codec_;
 
-	SwrContext* audio_convert_ctx_;
-	SwsContext* video_convert_ctx_;
+	std::weak_ptr<AudioConvertManger> audio_convert_;
+	std::weak_ptr<VideoConvertManger> video_convert_;
+	
 
 	std::weak_ptr<AVFrameManger> audio_frame_;
 	std::weak_ptr<AVFrameManger> video_frame_;
 
-	std::weak_ptr<AVFrameManger> rgb_frame_;
+	
 
 	std::function<void (DecodeError)> error_func_;
 
@@ -326,4 +331,67 @@ public:
 		av_frame_free(&frame_);
 	}
 	AVFrame *frame_;
+};
+
+struct AudioConvertParameter
+{
+	int des_layout;
+	AVSampleFormat des_fmt;
+	int des_sample_rate;
+	int src_channel;
+	AVSampleFormat src_sample_fmt;
+	int src_sample_rate;
+};
+
+class AudioConvertManger
+{
+public:
+	AudioConvertManger(AudioConvertParameter parameter)
+	{
+		audio_convert_ctx_ = swr_alloc();
+		audio_convert_ctx_ = swr_alloc_set_opts(audio_convert_ctx_,
+			parameter.des_layout,
+			parameter.des_fmt,
+			parameter.des_sample_rate,
+			parameter.src_channel,
+			parameter.src_sample_fmt,
+			parameter.src_sample_rate,
+			0,
+			NULL);
+		swr_init(audio_convert_ctx_);
+	}
+	~AudioConvertManger()
+	{
+		swr_free(&audio_convert_ctx_);
+	}
+
+	SwrContext* audio_convert_ctx_;
+};
+
+class VideoConvertManger
+{
+public:
+	VideoConvertManger(int width,int height,AVPixelFormat fmt)
+	{
+		int pic_size_ = avpicture_get_size(AV_PIX_FMT_RGB24, width, height);
+		pic_buff = (uint8_t*)av_malloc(pic_size_);
+		avpicture_fill((AVPicture *)(rgb_frame_.frame_), pic_buff, AV_PIX_FMT_RGB24, width, height);
+		video_convert_ctx_ = sws_getContext(width, height, fmt, width, height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL);
+
+	}
+
+	~VideoConvertManger()
+	{
+		av_free(pic_buff);
+		sws_freeContext(video_convert_ctx_);
+	}
+
+	void Convert(const uint8_t *const* src_data,int *src_stride,int height)
+	{
+		sws_scale(video_convert_ctx_, src_data, src_stride, 0,height, rgb_frame_.frame_->data, rgb_frame_.frame_->linesize);
+	}
+
+	SwsContext* video_convert_ctx_;
+	uint8_t * pic_buff;
+	AVFrameManger rgb_frame_;
 };

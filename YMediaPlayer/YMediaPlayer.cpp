@@ -245,6 +245,15 @@ void YMediaPlayer::Seek(float pos)
 	decoder_.SeekPos(media_info_.dur*pos*1000000);
 	audio_clock_ = media_info_.dur*pos;
 	video_clock_ = media_info_.dur*pos;
+
+	////first time ,need to fill the Source
+	//for (int i = 0; i < NUMBUFFERS; i++)
+	//{
+	//	char buffer[4608] = {0x80};
+	//	alBufferData(audio_buf_[i], AL_FORMAT_STEREO16, buffer, sizeof buffer, 44100);
+	//	alSourceQueueBuffers(source_id_, 1, &audio_buf_[i]);
+	//}
+	
 }
 
 int YMediaPlayer::AudioPlayThread()
@@ -285,11 +294,6 @@ int YMediaPlayer::AudioPlayThread()
 			{
 				continue;
 			}
-		}
-
-		if (media_info_.dur <= audio_clock_)
-		{
-			break;
 		}
 	}
 	return true;

@@ -54,7 +54,7 @@ int main(int argc, _TCHAR* argv[])
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
 	g_player = &player;
-	player.SetMediaFromFile("C:\\audio5d.mp3");
+	player.SetMediaFromFile("C:\\audio.mp3");
 	player.Play();
 
 						  // Game loop
@@ -78,7 +78,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		static int i = 0;
 		if (i++ % 2)
 		{
-			g_player->Seek(0.5);
+			g_player->Seek(0.9);
 			g_player->Play();
 		}
 		else
