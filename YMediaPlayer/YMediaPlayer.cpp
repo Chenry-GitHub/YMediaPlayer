@@ -243,8 +243,8 @@ bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 void YMediaPlayer::Seek(float pos)
 {
 	decoder_.SeekPos(media_info_.dur*pos);
-	audio_clock_ = media_info_.dur*pos;
-	video_clock_ = media_info_.dur*pos;
+//	audio_clock_ = media_info_.dur*pos;
+//	video_clock_ = media_info_.dur*pos;
 
 	////first time ,need to fill the Source
 	//for (int i = 0; i < NUMBUFFERS; i++)
@@ -396,7 +396,7 @@ void YMediaPlayer::synchronize_video()
 {
 	while (false == is_manual_stop_)
 	{
-//		printf("%f,%f \n", video_clock_,audio_clock_);
+		printf("%f,%f \n", video_clock_,audio_clock_);
 		if (video_clock_ <= audio_clock_)
 			break;
 		int delayTime = (video_clock_- audio_clock_) * 1000;

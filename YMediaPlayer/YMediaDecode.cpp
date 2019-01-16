@@ -104,6 +104,7 @@ void YMediaDecode::SeekPos(double pos)//ffmpeg pts
 	is_seek_ = true;
 	audio_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, audio_ctx->GetStream()->time_base);
 	video_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, video_ctx->GetStream()->time_base);
+	//video_seek_convert_dur_ = audio_seek_convert_dur_;
 }
 
 AudioPackageInfo YMediaDecode::PopAudioQue()
@@ -309,10 +310,15 @@ void YMediaDecode::DecodeThread()
 			{
 				double abs_value = abs(format->pkg_->pts - audio_seek_convert_dur_);
 				printf("obs-value-audio%f\n", abs_value);
-				if (abs_value <= AV_TIME_BASE*100)//5秒
+				if (abs_value <= AV_TIME_BASE* 5)//5秒
 				{
 					audio_cnd_.notify_all();
 					audio_seek_convert_dur_ = SEEK_TIME_DEFAULT;
+
+					InnerPacketInfo info;
+					info.pkg = av_packet_alloc();
+					av_packet_ref(info.pkg, format->pkg_);
+					audio_inner_que_.push(info);
 				}
 			}
 			else
@@ -329,12 +335,17 @@ void YMediaDecode::DecodeThread()
 			{
 				double abs_value = abs(format->pkg_->pts - video_seek_convert_dur_);
 				printf("obs-value-video%f\n", abs_value);
-				if (abs_value <= AV_TIME_BASE * 100)//5秒
+				if (abs_value <= AV_TIME_BASE * 5)//5秒
 				{
 					if (format->pkg_->flags&AV_PKT_FLAG_KEY)
 					{
 						video_cnd_.notify_all();
 						video_seek_convert_dur_ = SEEK_TIME_DEFAULT;
+
+						InnerPacketInfo info;
+						info.pkg = av_packet_alloc();
+						av_packet_ref(info.pkg, format->pkg_);
+						video_inner_que_.push(info);
 					}
 				}
 			}
