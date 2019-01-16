@@ -6,7 +6,7 @@
 #define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/
 #define AUDIO_OUT_CHANNEL 2
 #define KEY_WORD_CONDUCT "conduct"
-
+#define  SEEK_TIME_DEFAULT -1.0
 
 
 YMediaDecode::YMediaDecode()
@@ -69,8 +69,7 @@ void YMediaDecode::EmptyAudioQue()
 		AudioPackageInfo info;
 		if (audio_que_.TryPop(info))
 		{
-			if (info.size > 0)
-				av_free(info.data);
+			FreeAudioPackageInfo(&info);
 		}
 	}
 
@@ -96,16 +95,20 @@ void YMediaDecode::EmptyVideoQue()
 	}
 }
 
-void YMediaDecode::SeekPos(double pos)
+void YMediaDecode::SeekPos(double pos)//ffmpeg pts 
 {
+	auto audio_ctx = audio_codec_.lock();
+	auto video_ctx = video_codec_.lock();
+	if (!audio_ctx || !video_ctx)
+		return;
 	is_seek_ = true;
-	seek_time_ = pos;
+	audio_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, audio_ctx->GetStream()->time_base);
+	video_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, video_ctx->GetStream()->time_base);
 }
 
 AudioPackageInfo YMediaDecode::PopAudioQue()
 {
 	AudioPackageInfo info;
-	
 	InnerPacketInfo pkg_info;
 	audio_inner_que_.WaitPop(pkg_info);
 	if (FLAG_CONDUCT_QUE == pkg_info.flag )
@@ -147,7 +150,7 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 
 void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
 {
-	if (info->error == ERROR_NO_ERROR)
+	if(info)
 		av_free(info->data);
 }
 
@@ -178,14 +181,25 @@ void YMediaDecode::SetMediaFunction(std::function<void(MediaInfo)> func)
 	media_func_ = func;
 }
 
-void YMediaDecode::IsDecodeDone()
+void YMediaDecode::JudgeBlockAudioSeek()
 {
+	unique_lock<std::mutex> unique(audio_cnd_lock_);
+	audio_cnd_.wait(unique, [&] {return audio_seek_convert_dur_ == SEEK_TIME_DEFAULT; });
+	printf("after:JudgeBlockAudioSeek\n");
+}
 
+void YMediaDecode::JudgeBlockVideoSeek()
+{
+	unique_lock<std::mutex> unique(video_cnd_lock_);
+	video_cnd_.wait(unique, [&] { return video_seek_convert_dur_ == SEEK_TIME_DEFAULT; });
+	printf("after:JudgeBlockVideoSeek\n");
 }
 
 void YMediaDecode::DecodeThread()
 {
 	is_seek_ = false;
+	audio_seek_convert_dur_ = SEEK_TIME_DEFAULT;
+	video_seek_convert_dur_ = SEEK_TIME_DEFAULT;
 	is_manual_stop_ = false;
 	uint8_t* pic_buff=nullptr;
 
@@ -200,7 +214,7 @@ void YMediaDecode::DecodeThread()
 
 	//notify media info for player
 	MediaInfo info;
-	info.dur = (double)format->ctx_->duration / 1000000;
+	info.dur = (double)format->ctx_->duration / AV_TIME_BASE;
 	NotifyMediaInfo(info);
 
 	//this is for audio
@@ -256,19 +270,21 @@ void YMediaDecode::DecodeThread()
 		{
 			if (audio_ctx->IsValid())
 			{
-				long long audio_pos = av_rescale_q(seek_time_, { 1, AV_TIME_BASE }, audio_ctx->GetStream()->time_base);
-				if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_pos, AVSEEK_FLAG_BACKWARD) >= 0)
+				if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_seek_convert_dur_, AVSEEK_FLAG_BACKWARD) >= 0)
 				{
 					EmptyAudioQue();
+					avcodec_flush_buffers(audio_ctx->codec_ctx_);
+					printf("Audio:Seek Success\n");
 				}
 			}
 			
 			if (video_ctx->IsValid())
 			{
-				long long video_pos = av_rescale_q(seek_time_, { 1, AV_TIME_BASE }, video_ctx->GetStream()->time_base);
-				if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_pos, AVSEEK_FLAG_BACKWARD) >= 0)
+				if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_seek_convert_dur_, AVSEEK_FLAG_BACKWARD) >= 0)
 				{
 					EmptyVideoQue();
+					avcodec_flush_buffers(video_ctx->codec_ctx_);
+					printf("Video:Seek Success\n");
 				}
 			}
 			is_seek_ = false;
@@ -276,7 +292,7 @@ void YMediaDecode::DecodeThread()
 		//end seek operation
 		if (!format->read())
 		{
-			if (!audio_inner_que_.IsEmpty() || !video_inner_que_.IsEmpty() || !audio_que_.IsEmpty() || !video_que_.IsEmpty())
+			/*if ( audio_seek_time_!=SEEK_TIME_DEFAULT || video_seek_time_!=SEEK_TIME_DEFAULT)
 			{
 				continue;
 			}
@@ -284,22 +300,51 @@ void YMediaDecode::DecodeThread()
 			{
 				printf("Decode Detect Play Done!\n");
 				break;
-			}
+			}*/
+			continue;
 		}
 		if (format->pkg_->stream_index == audio_ctx->stream_index_)
 		{
-			InnerPacketInfo info;
-			info.pkg = av_packet_alloc();
-			av_packet_ref(info.pkg, format->pkg_);
-
-			audio_inner_que_.push(info);
+			if (audio_seek_convert_dur_!= SEEK_TIME_DEFAULT)
+			{
+				double abs_value = abs(format->pkg_->pts - audio_seek_convert_dur_);
+				printf("obs-value-audio%f\n", abs_value);
+				if (abs_value <= AV_TIME_BASE*100)//5秒
+				{
+					audio_cnd_.notify_all();
+					audio_seek_convert_dur_ = SEEK_TIME_DEFAULT;
+				}
+			}
+			else
+			{
+				InnerPacketInfo info;
+				info.pkg = av_packet_alloc();
+				av_packet_ref(info.pkg, format->pkg_);
+				audio_inner_que_.push(info);
+			}
 		}
 		else if (format->pkg_->stream_index == video_ctx->stream_index_)
 		{
-			InnerPacketInfo info;
-			info.pkg = av_packet_alloc();
-			av_packet_ref(info.pkg, format->pkg_);
-			video_inner_que_.push(info);
+			if (video_seek_convert_dur_ != SEEK_TIME_DEFAULT)
+			{
+				double abs_value = abs(format->pkg_->pts - video_seek_convert_dur_);
+				printf("obs-value-video%f\n", abs_value);
+				if (abs_value <= AV_TIME_BASE * 100)//5秒
+				{
+					if (format->pkg_->flags&AV_PKT_FLAG_KEY)
+					{
+						video_cnd_.notify_all();
+						video_seek_convert_dur_ = SEEK_TIME_DEFAULT;
+					}
+				}
+			}
+			else
+			{
+				InnerPacketInfo info;
+				info.pkg = av_packet_alloc();
+				av_packet_ref(info.pkg, format->pkg_);
+				video_inner_que_.push(info);
+			}
 		}
 		format->release_package();
 	}
@@ -309,21 +354,8 @@ void YMediaDecode::DecodeThread()
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
-	printf("After while\n");
-	///* flush the audio decoder */
-	//if (audio_ctx->codec_ctx_)
-	//{
-	//	format->pkg_->size = 0;
-	//	format->pkg_->data = nullptr;
-	//	DoConvertAudio(format->pkg_);
-	//}
-	///* flush the video decoder */
-	//if (video_ctx->codec_ctx_)
-	//{
-	//	format->pkg_->size = 0;
-	//	format->pkg_->data = nullptr;
-	//	DoConvertVideo(format->pkg_, 0);
-	//}
+	FlushAudioDecodec();
+	FlushVideoDecodec();
 
 	printf("YMediaDecode quit\n");
 }
@@ -340,6 +372,7 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 	{
 		return;
 	}
+
 	int ret = avcodec_send_packet(codec_ctx->codec_ctx_, pkg);
 	if (ret != 0)
 	{
@@ -471,6 +504,34 @@ double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFr
 	video_clock += frame_delay;
 
 	return video_clock;
+}
+
+void YMediaDecode::FlushVideoDecodec()
+{
+	auto video_codec = video_codec_.lock();
+	if (video_codec->IsValid())
+	{
+		InnerPacketInfo info_video;
+		info_video.pkg = av_packet_alloc();
+		info_video.pkg->size = 0;
+		info_video.pkg->data = nullptr;
+		info_video.flag = FLAG_FLUSH;
+		DoConvertVideo(info_video.pkg, 0);
+	}
+}
+
+void YMediaDecode::FlushAudioDecodec()
+{
+	auto audio_codec = audio_codec_.lock();
+	if (audio_codec->IsValid())
+	{
+		InnerPacketInfo info_audio;
+		info_audio.pkg = av_packet_alloc();
+		info_audio.pkg->size = 0;
+		info_audio.pkg->data = nullptr;
+		info_audio.flag = FLAG_FLUSH;
+		DoConvertAudio(info_audio.pkg);
+	}
 }
 
 void YMediaDecode::NotifyDecodeStatus(DecodeError error)

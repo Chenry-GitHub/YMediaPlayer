@@ -78,6 +78,7 @@ enum FLAG_PKG {
 	FLAG_DEFAULT=0,
 	FLAG_CONDUCT_QUE,
 	FLAG_SEEK,
+	FLAG_FLUSH,
 };
 struct InnerPacketInfo {
 	AVPacket *pkg;
@@ -124,7 +125,9 @@ public:
 
 	void SetMediaFunction(std::function<void(MediaInfo)> func);
 
-	void IsDecodeDone();
+	void JudgeBlockAudioSeek();
+	
+	void JudgeBlockVideoSeek();
 protected:
 
 	void DecodeThread();
@@ -135,6 +138,9 @@ protected:
 
 	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts, double cur_clock);
 
+	void FlushVideoDecodec();
+
+	void FlushAudioDecodec();
 private:
 
 	void NotifyDecodeStatus(DecodeError);
@@ -148,7 +154,8 @@ private:
 	atomic_bool is_manual_stop_;
 
 	atomic_bool is_seek_;
-	double seek_time_;
+	long long audio_seek_convert_dur_;
+	long long video_seek_convert_dur_;
 
 	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
 	ThreadSafe_Queue<VideoPackageInfo> video_que_;
@@ -167,10 +174,13 @@ private:
 	std::weak_ptr<AVFrameManger> audio_frame_;
 	std::weak_ptr<AVFrameManger> video_frame_;
 
+
+	std::mutex audio_cnd_lock_;
+	std::mutex video_cnd_lock_;
+	std::condition_variable audio_cnd_;
+	std::condition_variable video_cnd_;
 	
-
 	std::function<void (DecodeError)> error_func_;
-
 	std::function<void(MediaInfo)> media_func_;
 };
 

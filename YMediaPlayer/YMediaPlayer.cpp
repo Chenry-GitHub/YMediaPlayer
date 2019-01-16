@@ -165,7 +165,7 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 	printf("decoder_.SetMedia\n");
 
 	audio_thread_ = std::move(std::thread(&YMediaPlayer::AudioPlayThread, this));
-	
+
 	//TODO
 	video_thread_ = std::move(std::thread(&YMediaPlayer::VideoPlayThread, this));
 
@@ -242,7 +242,7 @@ bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 
 void YMediaPlayer::Seek(float pos)
 {
-	decoder_.SeekPos(media_info_.dur*pos*1000000);
+	decoder_.SeekPos(media_info_.dur*pos);
 	audio_clock_ = media_info_.dur*pos;
 	video_clock_ = media_info_.dur*pos;
 
@@ -271,6 +271,8 @@ int YMediaPlayer::AudioPlayThread()
 
 	while ( false == is_manual_stop_)
 	{
+		decoder_.JudgeBlockAudioSeek();
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 		if (IsPause())
@@ -353,6 +355,8 @@ int YMediaPlayer::VideoPlayThread()
 
 	while (false == is_manual_stop_)
 	{
+		decoder_.JudgeBlockVideoSeek();
+
 		VideoPackageInfo info = decoder_.PopVideoQue(video_clock_);
 		if (info.error != ERROR_NO_ERROR)
 			continue;
