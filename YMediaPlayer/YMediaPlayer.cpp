@@ -21,7 +21,6 @@ GLfloat texCoord[8] = { 0.0f, 0.0f,
 0.0f, 1.0f };         //ÓëjpgÍ¼Æ¬´æ´¢ÓÐ¹Ø£¬µ¹ÖÃµÄ
 
 #define AUDIO_OUT_SAMPLE_RATE 44100
-#define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/
 #define AUDIO_OUT_CHANNEL 2
 GLFWwindow  *g_hwnd;
 
@@ -243,16 +242,8 @@ bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 void YMediaPlayer::Seek(float pos)
 {
 	decoder_.SeekPos(media_info_.dur*pos);
-//	audio_clock_ = media_info_.dur*pos;
-//	video_clock_ = media_info_.dur*pos;
-
-	////first time ,need to fill the Source
-	//for (int i = 0; i < NUMBUFFERS; i++)
-	//{
-	//	char buffer[4608] = {0x80};
-	//	alBufferData(audio_buf_[i], AL_FORMAT_STEREO16, buffer, sizeof buffer, 44100);
-	//	alSourceQueueBuffers(source_id_, 1, &audio_buf_[i]);
-	//}
+	audio_clock_ = media_info_.dur*pos;
+	video_clock_ = media_info_.dur*pos;
 	
 }
 
@@ -271,7 +262,20 @@ int YMediaPlayer::AudioPlayThread()
 
 	while ( false == is_manual_stop_)
 	{
-		decoder_.JudgeBlockAudioSeek();
+		if (decoder_.JudgeBlockAudioSeek())
+		{
+			ALint processed = 0;
+			alGetSourcei(source_id_, AL_BUFFERS_PROCESSED, &processed);
+			while (processed--)
+			{
+				ALuint bufferID = 0;
+				alSourceUnqueueBuffers(source_id_, 1, &bufferID);
+				char data[4608] = { 0x80 };
+				alBufferData(bufferID, AL_FORMAT_STEREO16, data, sizeof data, AUDIO_OUT_SAMPLE_RATE);
+				alSourceQueueBuffers(source_id_, 1, &bufferID);
+			}
+			CLEAR_MAP(que_map_);
+		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
@@ -291,7 +295,6 @@ int YMediaPlayer::AudioPlayThread()
 			ALuint bufferID = 0;
 			alSourceUnqueueBuffers(source_id_, 1, &bufferID);
 			audio_clock_ = que_map_[bufferID];
-
 			if (!FillAudioBuff(bufferID))
 			{
 				continue;

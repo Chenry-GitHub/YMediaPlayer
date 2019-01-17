@@ -3,7 +3,6 @@
 
 
 #define AUDIO_OUT_SAMPLE_RATE 44100
-#define MAX_AUDIO_FRAME_SIZE 192000 /*one second bytes  44100*2*2 = 176400*/
 #define AUDIO_OUT_CHANNEL 2
 #define KEY_WORD_CONDUCT "conduct"
 #define  SEEK_TIME_DEFAULT -1.0
@@ -162,6 +161,8 @@ void YMediaDecode::ConductAudioBlocking()
 	info_audio.pkg = av_packet_alloc();
 	info_audio.flag = FLAG_CONDUCT_QUE;
 	audio_inner_que_.push(info_audio);
+
+	audio_cnd_.notify_all();
 }
 
 void YMediaDecode::ConductVideoBlocking()
@@ -170,6 +171,8 @@ void YMediaDecode::ConductVideoBlocking()
 	info_video.pkg = av_packet_alloc();
 	info_video.flag = FLAG_CONDUCT_QUE;
 	video_inner_que_.push(info_video);
+
+	video_cnd_.notify_all();
 }
 
 void YMediaDecode::SetErrorFunction(std::function<void(DecodeError)> error_func)
@@ -182,18 +185,18 @@ void YMediaDecode::SetMediaFunction(std::function<void(MediaInfo)> func)
 	media_func_ = func;
 }
 
-void YMediaDecode::JudgeBlockAudioSeek()
+bool YMediaDecode::JudgeBlockAudioSeek()
 {
 	unique_lock<std::mutex> unique(audio_cnd_lock_);
 	audio_cnd_.wait(unique, [&] {return audio_seek_convert_dur_ == SEEK_TIME_DEFAULT; });
-	printf("after:JudgeBlockAudioSeek\n");
+	return audio_seek_convert_dur_ != SEEK_TIME_DEFAULT;
 }
 
-void YMediaDecode::JudgeBlockVideoSeek()
+bool YMediaDecode::JudgeBlockVideoSeek()
 {
 	unique_lock<std::mutex> unique(video_cnd_lock_);
 	video_cnd_.wait(unique, [&] { return video_seek_convert_dur_ == SEEK_TIME_DEFAULT; });
-	printf("after:JudgeBlockVideoSeek\n");
+	return video_seek_convert_dur_ != SEEK_TIME_DEFAULT;
 }
 
 void YMediaDecode::DecodeThread()
@@ -275,7 +278,6 @@ void YMediaDecode::DecodeThread()
 				{
 					EmptyAudioQue();
 					avcodec_flush_buffers(audio_ctx->codec_ctx_);
-					printf("Audio:Seek Success\n");
 				}
 			}
 			
@@ -285,7 +287,6 @@ void YMediaDecode::DecodeThread()
 				{
 					EmptyVideoQue();
 					avcodec_flush_buffers(video_ctx->codec_ctx_);
-					printf("Video:Seek Success\n");
 				}
 			}
 			is_seek_ = false;
@@ -309,11 +310,11 @@ void YMediaDecode::DecodeThread()
 			if (audio_seek_convert_dur_!= SEEK_TIME_DEFAULT)
 			{
 				double abs_value = abs(format->pkg_->pts - audio_seek_convert_dur_);
-				printf("obs-value-audio%f\n", abs_value);
 				if (abs_value <= AV_TIME_BASE* 5)//5秒
 				{
-					audio_cnd_.notify_all();
 					audio_seek_convert_dur_ = SEEK_TIME_DEFAULT;
+					audio_cnd_.notify_all();
+					
 
 					InnerPacketInfo info;
 					info.pkg = av_packet_alloc();
@@ -334,14 +335,13 @@ void YMediaDecode::DecodeThread()
 			if (video_seek_convert_dur_ != SEEK_TIME_DEFAULT)
 			{
 				double abs_value = abs(format->pkg_->pts - video_seek_convert_dur_);
-				printf("obs-value-video%f\n", abs_value);
-				if (abs_value <= AV_TIME_BASE * 5)//5秒
+				if (abs_value <= AV_TIME_BASE * 5)
 				{
 					if (format->pkg_->flags&AV_PKT_FLAG_KEY)
 					{
-						video_cnd_.notify_all();
 						video_seek_convert_dur_ = SEEK_TIME_DEFAULT;
-
+						video_cnd_.notify_all();
+						
 						InnerPacketInfo info;
 						info.pkg = av_packet_alloc();
 						av_packet_ref(info.pkg, format->pkg_);
@@ -447,8 +447,6 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 	PushAudioQue(data, Audiobuffer_size, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL,dur,0,ERROR_NO_ERROR);
 	av_free(out_buffer);
 #endif
-
-	//swr_free(&au_convert_ctx);
 }
 void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
 {

@@ -125,9 +125,9 @@ public:
 
 	void SetMediaFunction(std::function<void(MediaInfo)> func);
 
-	void JudgeBlockAudioSeek();
+	bool JudgeBlockAudioSeek();
 	
-	void JudgeBlockVideoSeek();
+	bool JudgeBlockVideoSeek();
 protected:
 
 	void DecodeThread();
