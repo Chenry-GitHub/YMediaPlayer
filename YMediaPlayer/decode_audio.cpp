@@ -54,7 +54,7 @@ int main(int argc, _TCHAR* argv[])
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
 	g_player = &player;
-	player.SetMediaFromFile("D:\\video3.mp4");//http://hc.yinyuetai.com/uploads/videos/common/1B49016856A8CFADADF10DD94911F124.mp4?sc=8ec89b677a134c67
+	player.SetMediaFromFile("C:\\audio.mp3");//http://hc.yinyuetai.com/uploads/videos/common/1B49016856A8CFADADF10DD94911F124.mp4?sc=8ec89b677a134c67
 
 	player.Play();
 

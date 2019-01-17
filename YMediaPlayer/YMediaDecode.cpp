@@ -2,7 +2,8 @@
 
 
 #define  SEEK_TIME_DEFAULT -1.0
-#define  QUE_PACKAGEINFO_SIZE 400
+#define  QUE_AUDIO_INNER_SIZE 400
+#define  QUE_VIDEO_INNER_SIZE 300
 
 
 YMediaDecode::YMediaDecode()
@@ -283,6 +284,12 @@ void YMediaDecode::DecodeThread()
 			}
 			is_seek_ = false;
 		}
+
+		if (video_inner_que_.GetSize() >= QUE_VIDEO_INNER_SIZE || audio_inner_que_.GetSize() >= QUE_AUDIO_INNER_SIZE)
+		{
+			continue;
+		}
+
 		//end seek operation
 		if (!format->read())
 		{
