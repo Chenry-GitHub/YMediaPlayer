@@ -39,7 +39,7 @@ enum DecodeError
 	ERROR_NO_ERROR = 0,
 	ERROR_NO_QUIT,
 	ERROR_FILE_ERROR,
-	ERROR_QUE_BLOCK,
+	ERROR_PKG_ERROR,
 };
 
 struct MediaInfo
@@ -73,16 +73,15 @@ struct AudioPackageInfo
 
 //flag:0 no error
 //flag:1 conduct block queue
-
+//用于鉴别该包的状态是否可用
 enum FLAG_PKG {
-	FLAG_DEFAULT=0,
+	FLAG_PLAY=0,
 	FLAG_CONDUCT_QUE,
-	FLAG_SEEK,
-	FLAG_FLUSH,
+	FLAG_FLUSH_DECODEC,
 };
 struct InnerPacketInfo {
 	AVPacket *pkg;
-	FLAG_PKG flag= FLAG_DEFAULT;
+	FLAG_PKG flag= FLAG_PLAY; 
 };
 
 
@@ -97,49 +96,56 @@ public:
 	YMediaDecode();
 	~YMediaDecode();
 
+	/*设置媒体信息*/
 	bool SetMedia(const std::string & path_file);
 
-	bool Pause();
-
-	bool StopDecode();
-
+	/*开始解码*/
 	bool StartDecode();
 
-	void EmptyAudioQue();
+	/*停止解码*/
+	bool StopDecode();
 
-	void EmptyVideoQue();
-
+	/*Play层调用，设置seek位置*/
 	void SeekPos(double pos);
 
-	AudioPackageInfo PopAudioQue();//audio call back by multi-thread
-
-	VideoPackageInfo PopVideoQue(double cur_clock); //video call back by multi-thread
-
-	void FreeAudioPackageInfo(AudioPackageInfo*);
-
-	void ConductAudioBlocking();
-
-	void ConductVideoBlocking();
-
+	/*Play层调用设置回调错误信息*/
 	void SetErrorFunction(std::function<void(DecodeError)> error_func);
 
+	/*Play层调用设置回调信息*/
 	void SetMediaFunction(std::function<void(MediaInfo)> func);
 
+	/*Play层调用，释放播放后的包体*/
+	void FreeAudioPackageInfo(AudioPackageInfo*);
+
+	/*清空音频，视频队列*/
+	void EmptyAudioQue();
+	void EmptyVideoQue();
+
+	/*Play层调用获取数据，分别在不同的线程中调用*/
+	AudioPackageInfo PopAudioQue();
+	VideoPackageInfo PopVideoQue(double cur_clock); 
+
+	/*导通Play层阻塞*/
+	void ConductAudioBlocking();
+	void ConductVideoBlocking();
+
+	/*用于Play层调用，出现阻塞seek操作*/
 	bool JudgeBlockAudioSeek();
-	
 	bool JudgeBlockVideoSeek();
 protected:
 
+	/*解码线程*/
 	void DecodeThread();
 
+	/*解码转换*/
 	void DoConvertAudio(AVPacket *pkg);
-
 	void DoConvertVideo(AVPacket *pkg,double cur_clock);
 
+	/*获取视频恰当的pts*/
 	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts, double cur_clock);
 
+	/*退出解码线程需要调用的*/
 	void FlushVideoDecodec();
-
 	void FlushAudioDecodec();
 private:
 

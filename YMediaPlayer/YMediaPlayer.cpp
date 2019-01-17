@@ -202,7 +202,7 @@ bool YMediaPlayer::Stop()
 	is_pause_ = true;
 
 	alSourceStop(source_id_);
-	alSourcei(source_id_, AL_BUFFER, 0);
+	alSourcei(source_id_, AL_BUFFER, 0x80);
 
 	if (video_thread_.joinable())
 	{
@@ -264,16 +264,7 @@ int YMediaPlayer::AudioPlayThread()
 	{
 		if (decoder_.JudgeBlockAudioSeek())
 		{
-			ALint processed = 0;
-			alGetSourcei(source_id_, AL_BUFFERS_PROCESSED, &processed);
-			while (processed--)
-			{
-				ALuint bufferID = 0;
-				alSourceUnqueueBuffers(source_id_, 1, &bufferID);
-				char data[4608] = { 0x80 };
-				alBufferData(bufferID, AL_FORMAT_STEREO16, data, sizeof data, AUDIO_OUT_SAMPLE_RATE);
-				alSourceQueueBuffers(source_id_, 1, &bufferID);
-			}
+			alSourcei(source_id_, AL_BUFFER, 0x80);
 			CLEAR_MAP(que_map_);
 		}
 

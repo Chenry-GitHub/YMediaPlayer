@@ -26,10 +26,6 @@ bool YMediaDecode::SetMedia(const std::string & path_file)
 	return true;
 }
 
-bool YMediaDecode::Pause()
-{
-	return true;
-}
 
 bool YMediaDecode::StopDecode()
 {
@@ -111,13 +107,13 @@ AudioPackageInfo YMediaDecode::PopAudioQue()
 	AudioPackageInfo info;
 	InnerPacketInfo pkg_info;
 	audio_inner_que_.WaitPop(pkg_info);
-	if (FLAG_CONDUCT_QUE == pkg_info.flag )
+	if (FLAG_PLAY == pkg_info.flag )
 	{
-		info.error = ERROR_QUE_BLOCK;
+		DoConvertAudio(pkg_info.pkg);
 	}
 	else
 	{
-		DoConvertAudio(pkg_info.pkg);
+		info.error = ERROR_PKG_ERROR;
 	}
 	av_packet_unref(pkg_info.pkg);
 	av_packet_free(&pkg_info.pkg);
@@ -132,13 +128,13 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 	VideoPackageInfo info;
 	InnerPacketInfo pkg_info;
 	video_inner_que_.WaitPop(pkg_info);
-	if (FLAG_CONDUCT_QUE == pkg_info.flag )
+	if (FLAG_PLAY == pkg_info.flag )
 	{
-		info.error = ERROR_QUE_BLOCK;
+		DoConvertVideo(pkg_info.pkg, cur_clock);
 	}
 	else
 	{
-		DoConvertVideo(pkg_info.pkg, cur_clock);
+		info.error = ERROR_PKG_ERROR;
 	}
 	
 	av_packet_unref(pkg_info.pkg);
@@ -150,7 +146,7 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 
 void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
 {
-	if(info)
+	if(info && info->error == ERROR_NO_ERROR)
 		av_free(info->data);
 }
 
@@ -265,10 +261,9 @@ void YMediaDecode::DecodeThread()
 		video_convert_ = video_convert;
 	}
 
-	
-	
 	while (!is_manual_stop_)
 	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		//seek operation
 		if (is_seek_)
 		{
@@ -294,15 +289,6 @@ void YMediaDecode::DecodeThread()
 		//end seek operation
 		if (!format->read())
 		{
-			/*if ( audio_seek_time_!=SEEK_TIME_DEFAULT || video_seek_time_!=SEEK_TIME_DEFAULT)
-			{
-				continue;
-			}
-			else
-			{
-				printf("Decode Detect Play Done!\n");
-				break;
-			}*/
 			continue;
 		}
 		if (format->pkg_->stream_index == audio_ctx->stream_index_)
@@ -315,18 +301,15 @@ void YMediaDecode::DecodeThread()
 					audio_seek_convert_dur_ = SEEK_TIME_DEFAULT;
 					audio_cnd_.notify_all();
 					
-
 					InnerPacketInfo info;
-					info.pkg = av_packet_alloc();
-					av_packet_ref(info.pkg, format->pkg_);
+					info.pkg = av_packet_clone(format->pkg_);
 					audio_inner_que_.push(info);
 				}
 			}
 			else
 			{
 				InnerPacketInfo info;
-				info.pkg = av_packet_alloc();
-				av_packet_ref(info.pkg, format->pkg_);
+				info.pkg = av_packet_clone(format->pkg_);
 				audio_inner_que_.push(info);
 			}
 		}
@@ -343,8 +326,7 @@ void YMediaDecode::DecodeThread()
 						video_cnd_.notify_all();
 						
 						InnerPacketInfo info;
-						info.pkg = av_packet_alloc();
-						av_packet_ref(info.pkg, format->pkg_);
+						info.pkg = av_packet_clone(format->pkg_);
 						video_inner_que_.push(info);
 					}
 				}
@@ -352,17 +334,11 @@ void YMediaDecode::DecodeThread()
 			else
 			{
 				InnerPacketInfo info;
-				info.pkg = av_packet_alloc();
-				av_packet_ref(info.pkg, format->pkg_);
+				info.pkg = av_packet_clone(format->pkg_);
 				video_inner_que_.push(info);
 			}
 		}
 		format->release_package();
-	}
-
-	while (!is_manual_stop_ && (!audio_inner_que_.IsEmpty() || !video_inner_que_.IsEmpty()||!audio_que_.IsEmpty()||!video_que_.IsEmpty()))
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
 	FlushAudioDecodec();
@@ -524,7 +500,7 @@ void YMediaDecode::FlushVideoDecodec()
 		info_video.pkg = av_packet_alloc();
 		info_video.pkg->size = 0;
 		info_video.pkg->data = nullptr;
-		info_video.flag = FLAG_FLUSH;
+		info_video.flag = FLAG_FLUSH_DECODEC;
 		DoConvertVideo(info_video.pkg, 0);
 	}
 }
@@ -538,7 +514,7 @@ void YMediaDecode::FlushAudioDecodec()
 		info_audio.pkg = av_packet_alloc();
 		info_audio.pkg->size = 0;
 		info_audio.pkg->data = nullptr;
-		info_audio.flag = FLAG_FLUSH;
+		info_audio.flag = FLAG_FLUSH_DECODEC;
 		DoConvertAudio(info_audio.pkg);
 	}
 }
