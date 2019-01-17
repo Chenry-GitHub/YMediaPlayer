@@ -53,7 +53,6 @@ struct VideoPackageInfo
 	int width;
 	int height;
 	double pts;
-	double clock;
 	DecodeError error  = ERROR_NO_ERROR;
 };
 

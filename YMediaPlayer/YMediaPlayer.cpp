@@ -356,7 +356,7 @@ int YMediaPlayer::VideoPlayThread()
 		VideoPackageInfo info = decoder_.PopVideoQue(video_clock_);
 		if (info.error != ERROR_NO_ERROR)
 			continue;
-		video_clock_ = info.clock;
+		video_clock_ = info.pts;
 
 		synchronize_video();
 

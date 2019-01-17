@@ -527,7 +527,6 @@ void YMediaDecode::DoConvertVideo(AVPacket *pkg, double cur_clock)
 			info.width = codec_ctx->codec_ctx_->width;
 			info.height = codec_ctx->codec_ctx_->height;
 			info.pts = video_pts;
-			info.clock = video_pts;
 			info.error = ERROR_NO_ERROR;
 			video_que_.push(info);
 	}
