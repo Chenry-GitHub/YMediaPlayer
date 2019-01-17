@@ -1,11 +1,8 @@
 ﻿#include "YMediaDecode.h"
-#include "WavPlayer.h"
 
 
-#define AUDIO_OUT_SAMPLE_RATE 44100
-#define AUDIO_OUT_CHANNEL 2
-#define KEY_WORD_CONDUCT "conduct"
 #define  SEEK_TIME_DEFAULT -1.0
+#define  QUE_PACKAGEINFO_SIZE 400
 
 
 YMediaDecode::YMediaDecode()
@@ -18,10 +15,12 @@ YMediaDecode::~YMediaDecode()
 
 }
 
-bool YMediaDecode::SetMedia(const std::string & path_file)
+bool YMediaDecode::SetMedia(const std::string & path_file, int sample_rate, int channel)
 {
 	StopDecode();
 	path_file_ = path_file;
+	sample_rate_ = sample_rate;
+	channel_ = channel;
 	StartDecode();
 	return true;
 }
@@ -67,8 +66,6 @@ void YMediaDecode::EmptyAudioQue()
 			FreeAudioPackageInfo(&info);
 		}
 	}
-
-
 }
 
 void YMediaDecode::EmptyVideoQue()
@@ -232,9 +229,9 @@ void YMediaDecode::DecodeThread()
 	}
 
 	AudioConvertParameter parameter;
-	parameter.des_fmt = AV_SAMPLE_FMT_S16;
-	parameter.des_layout = AV_CH_LAYOUT_STEREO;
-	parameter.des_sample_rate = AUDIO_OUT_SAMPLE_RATE;
+	parameter.des_fmt = AV_SAMPLE_FMT_S16;/*default 16 bits*/
+	parameter.des_layout = (2==channel_ ?AV_CH_LAYOUT_STEREO : AV_CH_LAYOUT_MONO);
+	parameter.des_sample_rate = sample_rate_;
 	parameter.src_channel = av_get_default_channel_layout(audio_ctx->codec_ctx_->channels);
 	parameter.src_sample_fmt= audio_ctx->codec_ctx_->sample_fmt;
 	parameter.src_sample_rate= audio_ctx->codec_ctx_->sample_rate;
@@ -379,22 +376,18 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 		int out_samples = swr_convert(convert->audio_convert_ctx_, &out_buffer, out_size_candidate, (const uint8_t **)audio_frame->frame_->data, audio_frame->frame_->nb_samples);
 
 		int Audiobuffer_size = av_samples_get_buffer_size(NULL,
-			AUDIO_OUT_CHANNEL, out_samples, AV_SAMPLE_FMT_S16, 1);
+			channel_, out_samples, AV_SAMPLE_FMT_S16, 1);
 
 		//push to media player
 		void * data = av_malloc(Audiobuffer_size);
 		memcpy_s(data, Audiobuffer_size, out_buffer, Audiobuffer_size);
-		double dur = audio_frame->frame_->pkt_duration* av_q2d(codec_ctx->GetStream()->time_base);
 		double pts = audio_frame->frame_->pts *av_q2d(codec_ctx->GetStream()->time_base);
 		//printf("pts:pts:pts:%f\n",pts);
 		
 		AudioPackageInfo info;
 		info.data = data;
 		info.size = Audiobuffer_size;
-		info.dur = dur;
 		info.pts = pts;
-		info.sample_rate = AUDIO_OUT_SAMPLE_RATE;
-		info.channels = AUDIO_OUT_CHANNEL;
 		info.error = ERROR_NO_ERROR;
 		audio_que_.push(info);
 
@@ -424,55 +417,7 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 	av_free(out_buffer);
 #endif
 }
-void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
-{
-	if (data == NULL)
-		return;
 
-	static BITMAPINFO *bitMapinfo = NULL;
-	static bool First = TRUE;
-
-	if (First)
-	{
-		BYTE * m_bitBuffer = new BYTE[40 + 4 * 256];//¿ª±ÙÒ»¸öÄÚ´æÇøÓò  
-
-		if (m_bitBuffer == NULL)
-		{
-			return;
-		}
-		First = FALSE;
-		memset(m_bitBuffer, 0, 40 + 4 * 256);
-		bitMapinfo = (BITMAPINFO *)m_bitBuffer;
-		bitMapinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-		bitMapinfo->bmiHeader.biPlanes = 1;
-		for (int i = 0; i < 256; i++)
-		{ //ÑÕÉ«µÄÈ¡Öµ·¶Î§ (0-255)  
-			bitMapinfo->bmiColors[i].rgbBlue = bitMapinfo->bmiColors[i].rgbGreen = bitMapinfo->bmiColors[i].rgbRed = (BYTE)i;
-		}
-	}
-	bitMapinfo->bmiHeader.biHeight = -height;
-	bitMapinfo->bmiHeader.biWidth = width;
-	bitMapinfo->bmiHeader.biBitCount = 3 * 8;
-	RECT drect;
-	GetClientRect(hWnd, &drect);    //pWndÖ¸ÏòCWndÀàµÄÒ»¸öÖ¸Õë   
-	HDC hDC = GetDC(hWnd);     //HDCÊÇWindowsµÄÒ»ÖÖÊý¾ÝÀàÐÍ£¬ÊÇÉè±¸ÃèÊö¾ä±ú£»  
-	SetStretchBltMode(hDC, COLORONCOLOR);
-	StretchDIBits(hDC,
-		0,
-		0,
-		drect.right,   //ÏÔÊ¾´°¿Ú¿í¶È  
-		drect.bottom,  //ÏÔÊ¾´°¿Ú¸ß¶È  
-		0,
-		0,
-		width,      //Í¼Ïñ¿í¶È  
-		height,      //Í¼Ïñ¸ß¶È  
-		data,
-		bitMapinfo,
-		DIB_RGB_COLORS,
-		SRCCOPY
-	);
-	ReleaseDC(hWnd, hDC);
-}
 double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFrame, double pts, double cur_clock)
 {
 	double video_clock = cur_clock;

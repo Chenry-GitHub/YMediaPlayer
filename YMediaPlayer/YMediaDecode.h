@@ -8,7 +8,6 @@
 #include <functional>
 using namespace std;
 
-#include <windows.h>
 
 
 
@@ -27,7 +26,7 @@ extern "C"
 //#include "Shader.h"
 
 
-#define  QUE_PACKAGEINFO_SIZE 200
+
 
 enum YMediaCallBackType
 {
@@ -64,9 +63,6 @@ struct AudioPackageInfo
 	void *data=nullptr;
 	int size = 0;
 	double pts;
-	double dur;
-	int sample_rate;
-	int channels;
 	DecodeError error = ERROR_NO_ERROR;
 };
 
@@ -97,7 +93,7 @@ public:
 	~YMediaDecode();
 
 	/*设置媒体信息*/
-	bool SetMedia(const std::string & path_file);
+	bool SetMedia(const std::string & path_file,int sample_rate,int channel);
 
 	/*开始解码*/
 	bool StartDecode();
@@ -154,11 +150,10 @@ private:
 	void NotifyMediaInfo(MediaInfo info);
 
 	std::string path_file_;
-
 	std::thread decode_thread_;
-
 	atomic_bool is_manual_stop_;
-
+	atomic_int sample_rate_;
+	atomic_int channel_;
 	atomic_bool is_seek_;
 	long long audio_seek_convert_dur_;
 	long long video_seek_convert_dur_;

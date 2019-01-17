@@ -1,5 +1,7 @@
 ﻿#include "YMediaPlayer.h"
 
+#include <windows.h>
+
 #define CLEAR_MAP(map_ )  \
 for (auto iter = map_.begin(); iter != map_.end();)\
 	iter = map_.erase(iter);
@@ -160,7 +162,7 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 
 	path_file_ = path_file;
 
-	decoder_.SetMedia(path_file);
+	decoder_.SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
 
 	audio_thread_ = std::move(std::thread(&YMediaPlayer::AudioPlayThread, this));
@@ -232,7 +234,7 @@ bool YMediaPlayer::FillAudioBuff(ALuint& buf)
 	AudioPackageInfo info= decoder_.PopAudioQue();
 	if (info.error!= ERROR_NO_ERROR)
 		return false;
-	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, info.sample_rate);
+	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, AUDIO_OUT_SAMPLE_RATE);
 	alSourceQueueBuffers(source_id_, 1, &buf);
 	decoder_.FreeAudioPackageInfo(&info);
 	que_map_[buf] = info.pts;
@@ -418,4 +420,54 @@ void YMediaPlayer::OnMediaInfo(MediaInfo info)
 {
 	media_info_ = info;
 	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
+}
+
+void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
+{
+	if (data == NULL)
+		return;
+
+	static BITMAPINFO *bitMapinfo = NULL;
+	static bool First = TRUE;
+
+	if (First)
+	{
+		BYTE * m_bitBuffer = new BYTE[40 + 4 * 256];//¿ª±ÙÒ»¸öÄÚ´æÇøÓò  
+
+		if (m_bitBuffer == NULL)
+		{
+			return;
+		}
+		First = FALSE;
+		memset(m_bitBuffer, 0, 40 + 4 * 256);
+		bitMapinfo = (BITMAPINFO *)m_bitBuffer;
+		bitMapinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+		bitMapinfo->bmiHeader.biPlanes = 1;
+		for (int i = 0; i < 256; i++)
+		{ //ÑÕÉ«µÄÈ¡Öµ·¶Î§ (0-255)  
+			bitMapinfo->bmiColors[i].rgbBlue = bitMapinfo->bmiColors[i].rgbGreen = bitMapinfo->bmiColors[i].rgbRed = (BYTE)i;
+		}
+	}
+	bitMapinfo->bmiHeader.biHeight = -height;
+	bitMapinfo->bmiHeader.biWidth = width;
+	bitMapinfo->bmiHeader.biBitCount = 3 * 8;
+	RECT drect;
+	GetClientRect(hWnd, &drect);    //pWndÖ¸ÏòCWndÀàµÄÒ»¸öÖ¸Õë   
+	HDC hDC = GetDC(hWnd);     //HDCÊÇWindowsµÄÒ»ÖÖÊý¾ÝÀàÐÍ£¬ÊÇÉè±¸ÃèÊö¾ä±ú£»  
+	SetStretchBltMode(hDC, COLORONCOLOR);
+	StretchDIBits(hDC,
+		0,
+		0,
+		drect.right,   //ÏÔÊ¾´°¿Ú¿í¶È  
+		drect.bottom,  //ÏÔÊ¾´°¿Ú¸ß¶È  
+		0,
+		0,
+		width,      //Í¼Ïñ¿í¶È  
+		height,      //Í¼Ïñ¸ß¶È  
+		data,
+		bitMapinfo,
+		DIB_RGB_COLORS,
+		SRCCOPY
+	);
+	ReleaseDC(hWnd, hDC);
 }
