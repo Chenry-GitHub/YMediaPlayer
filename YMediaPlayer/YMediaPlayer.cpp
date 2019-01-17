@@ -204,7 +204,7 @@ bool YMediaPlayer::Stop()
 	is_pause_ = true;
 
 	alSourceStop(source_id_);
-	alSourcei(source_id_, AL_BUFFER, 0x80);
+	alSourcei(source_id_, AL_BUFFER, 0x00);
 
 	if (video_thread_.joinable())
 	{
@@ -266,7 +266,7 @@ int YMediaPlayer::AudioPlayThread()
 	{
 		if (decoder_.JudgeBlockAudioSeek())
 		{
-			alSourcei(source_id_, AL_BUFFER, 0x80);
+			alSourcei(source_id_, AL_BUFFER, 0x00);
 			CLEAR_MAP(que_map_);
 		}
 
