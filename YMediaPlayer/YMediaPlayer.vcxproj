@@ -153,7 +153,6 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ALEngine.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -161,16 +160,12 @@
     <ClInclude Include="WavPlayer.h" />
     <ClInclude Include="YMediaDecode.h" />
     <ClInclude Include="YMediaPlayer.h" />
-    <ClInclude Include="YMediaPlayer2.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ALEngine.cpp" />
     <ClCompile Include="decode_audio.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="WavPlayer.cpp" />
     <ClCompile Include="YMediaDecode.cpp" />
     <ClCompile Include="YMediaPlayer.cpp" />
-    <ClCompile Include="YMediaPlayer2.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
