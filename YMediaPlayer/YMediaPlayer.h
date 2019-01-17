@@ -26,7 +26,21 @@
 #define NUMBUFFERS              4
 
 extern GLFWwindow  *g_hwnd;
- 
+
+struct PlayerStatus
+{
+	enum Status
+	{
+		Pause=0,
+		Playing,
+		Done,
+	};
+	Status status=Pause;
+	int value;
+
+};
+
+
 class YMediaPlayer
 {
 public:
@@ -61,6 +75,8 @@ protected:
 
 	void OnMediaInfo(MediaInfo info);
 private:
+	void NotifyPlayerStatus(PlayerStatus);
+
 	std::string path_file_;
 	ALuint		source_id_;
 	MediaInfo media_info_;
@@ -79,5 +95,7 @@ private:
 	//this is for synchronization
 	double audio_clock_;
 	double video_clock_;
+
+	std::function<void(PlayerStatus)> status_func_;
 
 };

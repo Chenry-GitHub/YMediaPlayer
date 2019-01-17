@@ -54,7 +54,7 @@ int main(int argc, _TCHAR* argv[])
 	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
 	g_player = &player;
-	player.SetMediaFromFile("D:\\video.mp4");//http://hc.yinyuetai.com/uploads/videos/common/1B49016856A8CFADADF10DD94911F124.mp4?sc=8ec89b677a134c67
+	player.SetMediaFromFile("C:\\video.mp4");//http://hc.yinyuetai.com/uploads/videos/common/1B49016856A8CFADADF10DD94911F124.mp4?sc=8ec89b677a134c67
 
 	player.Play();
 
@@ -84,8 +84,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		}
 		else
 		{
-			g_player->SetMediaFromFile("D:\\video.mp4");
-			g_player->Play();
+			//g_player->SetMediaFromFile("C:\\video.mp4");
+			//g_player->Play();
 		}
 	}
 }

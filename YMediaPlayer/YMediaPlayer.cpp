@@ -92,6 +92,7 @@ bool gltLoadShaderFile(const char *szFile, GLuint shader)
 }
 
 YMediaPlayer::YMediaPlayer()
+	:status_func_(nullptr)
 {
 	alGenSources(1, &source_id_);
 	ALfloat SourcePos[] = { 0.0, 0.0, 0.0 };
@@ -264,6 +265,16 @@ int YMediaPlayer::AudioPlayThread()
 
 	while ( false == is_manual_stop_)
 	{
+		if ((int)media_info_.dur <= (int)audio_clock_)
+		{
+			printf("EndofAudio \n");
+			decoder_.StopDecode();
+			PlayerStatus st;
+			st.status = PlayerStatus::Done;
+			NotifyPlayerStatus(st);
+			break;
+		}
+
 		if (decoder_.JudgeBlockAudioSeek())
 		{
 			alSourcei(source_id_, AL_BUFFER, 0x00);
@@ -392,7 +403,7 @@ void YMediaPlayer::synchronize_video()
 {
 	while (false == is_manual_stop_)
 	{
-		printf("%f,%f \n", video_clock_,audio_clock_);
+	//	printf("%f,%f \n", video_clock_,audio_clock_);
 		if (video_clock_ <= audio_clock_)
 			break;
 		int delayTime = (video_clock_- audio_clock_) * 1000;
@@ -420,6 +431,12 @@ void YMediaPlayer::OnMediaInfo(MediaInfo info)
 {
 	media_info_ = info;
 	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
+}
+
+void YMediaPlayer::NotifyPlayerStatus(PlayerStatus st)
+{
+	if (status_func_)
+		status_func_(st);
 }
 
 void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
