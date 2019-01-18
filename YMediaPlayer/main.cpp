@@ -1,9 +1,18 @@
 #include "windows.h"  
-#include "TCHAR.h"  
+
+
+#include <glew.h>
+#include <glfw3.h>
+
+#include <glm.hpp>
+#include <ext.hpp>
+
+
 #include "YMediaPlayer.h"
 
-//#include "qaqlog/qaqlog.h"
 #include "ALEngine.h"
+#include "OpenALAudio.h"
+
 
 
 
@@ -13,7 +22,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 const GLuint WIDTH = 800, HEIGHT = 600;
 
-int main(int argc, _TCHAR* argv[])
+int main(int argc, char** argv[])
 {
 	//lg::Initialize();
 	//lg::AddConsoleLogger(lg::info);
@@ -30,7 +39,7 @@ int main(int argc, _TCHAR* argv[])
 
 	// Create a GLFWwindow object that we can use for GLFW's functions
 	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", nullptr, nullptr);
-	g_hwnd = window;
+	//g_hwnd = window;
 	glfwMakeContextCurrent(window);
 
 	// Set the required callback functions
@@ -50,11 +59,11 @@ int main(int argc, _TCHAR* argv[])
 	//ALEngine engine;
 	//engine.OpenFile("D:\\video.mp4");
 	//engine.Play();
+	OpenALAudio::InitPlayer();
 
-	YMediaPlayer::InitPlayer();
 	YMediaPlayer player;
 	g_player = &player;
-	player.SetMediaFromFile("C:\\video.mp4");//http://hc.yinyuetai.com/uploads/videos/common/1B49016856A8CFADADF10DD94911F124.mp4?sc=8ec89b677a134c67
+	player.SetMediaFromFile("D:\\video4.mp4");//http://hc.yinyuetai.com/uploads/videos/common/1B49016856A8CFADADF10DD94911F124.mp4?sc=8ec89b677a134c67
 
 	player.Play();
 
@@ -79,13 +88,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		static int i = 0;
 		if (i++ % 2)
 		{
-			g_player->Seek(0.8);
-			g_player->Play();
+			//g_player->Seek(0.8);
+			g_player->Pause();
 		}
 		else
 		{
 			//g_player->SetMediaFromFile("C:\\video.mp4");
-			//g_player->Play();
+			g_player->Play();
 		}
 	}
 }

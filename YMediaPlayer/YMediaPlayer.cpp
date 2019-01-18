@@ -1,119 +1,21 @@
 ﻿#include "YMediaPlayer.h"
 
-#include <windows.h>
+#include "OpenALAudio.h"
+#include "OpenGLVideo.h"
+#include "GDIVideo.h"
 
-#define CLEAR_MAP(map_ )  \
-for (auto iter = map_.begin(); iter != map_.end();)\
-	iter = map_.erase(iter);
-
-#include <glm.hpp>
-#include <ext.hpp>
-#include <glfw3.h>
-//#include "qaqlog\qaqlog.h"
-
-
-GLfloat vertexArray[12] = { -0.9f, -0.9f, 0.0f,
-0.9f, -0.9f, 0.0f,
-0.9f,  0.9f, 0.0f,
--0.9f,  0.9f, 0.0f };
-
-GLfloat texCoord[8] = { 0.0f, 0.0f,
-1.0f, 0.0f,
-1.0f, 1.0f,
-0.0f, 1.0f };         //ÓëjpgÍ¼Æ¬´æ´¢ÓÐ¹Ø£¬µ¹ÖÃµÄ
-
-#define AUDIO_OUT_SAMPLE_RATE 44100
-#define AUDIO_OUT_CHANNEL 2
-GLFWwindow  *g_hwnd;
-
-GLuint vao;
-GLuint vertex_buffer;
-GLuint texture_buffer;
-GLuint TextureID;
-GLuint vert_shader, frag_shader;
-GLuint program;
-
-
-/************************************************************************************/
-#include <stdio.h>
-#include <assert.h>
-#define MAX_SHADER_LENGTH 8192
-#define MAX_TARGET_NUM  10
-
-GLchar shaderText[MAX_SHADER_LENGTH];
-
-void gltLoadShaderSrc(const char *szShaderSrc, GLuint shader)
-{
-	GLchar *fsStringPtr[1];
-
-	fsStringPtr[0] = (GLchar *)szShaderSrc;
-	glShaderSource(shader, 1, (const GLchar **)fsStringPtr, NULL);
-}
-
-bool gltLoadShaderFile(const char *szFile, GLuint shader)
-{
-	GLint shaderLength = 0;
-	FILE *fp;
-
-	// Open the shader file
-	fp = fopen(szFile, "r");
-	if (fp != NULL)
-	{
-		// See how long the file is
-		while (fgetc(fp) != EOF)
-			shaderLength++;
-
-		// Allocate a block of memory to send in the shader
-		assert(shaderLength < MAX_SHADER_LENGTH);   // make me bigger!
-		if (shaderLength > MAX_SHADER_LENGTH)
-		{
-			fclose(fp);
-			return false;
-		}
-
-		// Go back to beginning of file
-		rewind(fp);
-
-		// Read the whole file in
-		if (shaderText != NULL)
-			fread(shaderText, 1, shaderLength, fp);
-
-		// Make sure it is null terminated and close the file
-		shaderText[shaderLength] = '\0';
-		fclose(fp);
-	}
-	else
-		return false;
-
-	// Load the string
-	gltLoadShaderSrc((const char *)shaderText, shader);
-
-	return true;
-}
 
 YMediaPlayer::YMediaPlayer()
 	:status_func_(nullptr)
 {
-	alGenSources(1, &source_id_);
-	ALfloat SourcePos[] = { 0.0, 0.0, 0.0 };
-	ALfloat SourceVel[] = { 0.0, 0.0, 0.0 };
-	ALfloat ListenerPos[] = { 0.0, 0, 0 };
-	ALfloat ListenerVel[] = { 0.0, 0.0, 0.0 };
-	// first 3 elements are "at", second 3 are "up"
-	ALfloat ListenerOri[] = { 0.0, 0.0, -1.0,  0.0, 1.0, 0.0 };
-	alSourcef(source_id_, AL_PITCH, 1.0);
-	alSourcef(source_id_, AL_GAIN, 1.0);
-	alSourcefv(source_id_, AL_POSITION, SourcePos);
-	alSourcefv(source_id_, AL_VELOCITY, SourceVel);
-	alSourcef(source_id_, AL_REFERENCE_DISTANCE, 50.0f);
-	alSourcei(source_id_, AL_LOOPING, AL_FALSE);
-	alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
-	alListener3f(AL_POSITION, 0, 0, 0);
+	audio_ = new OpenALAudio();
+	audio_->SetDataFunction(std::bind(&YMediaPlayer::OnAudioDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	audio_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnAudioSeekFunction, this));
 
-	alGenBuffers(NUMBUFFERS, audio_buf_);
-
-	Stop();
-
+	video_ = new GDIVideo();
+	video_->SetDataFunction(std::bind(&YMediaPlayer::OnVideoDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+	video_->SetSyncToAudioFunction(std::bind(&YMediaPlayer::synchronize_video, this));
+	video_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnVideoSeekFunction, this));
 
 	decoder_.SetErrorFunction(std::bind(&YMediaPlayer::OnDecodeError,this, std::placeholders::_1));
 	decoder_.SetMediaFunction(std::bind(&YMediaPlayer::OnMediaInfo, this, std::placeholders::_1));
@@ -122,39 +24,9 @@ YMediaPlayer::YMediaPlayer()
 YMediaPlayer::~YMediaPlayer()
 {
 	Stop();
-	alDeleteBuffers(NUMBUFFERS, audio_buf_);
-	alDeleteSources(1, &source_id_);
+
 }
 
-int YMediaPlayer::InitPlayer()
-{
-	ALCdevice* pDevice;
-	ALCcontext* pContext;
-
-	pDevice = alcOpenDevice(NULL);
-	pContext = alcCreateContext(pDevice, NULL);
-	alcMakeContextCurrent(pContext);
-
-	if (alcGetError(pDevice) != ALC_NO_ERROR)
-		return AL_FALSE;
-
-	return AL_TRUE;
-}
-
-int YMediaPlayer::UnInitPlayer()
-{
-	ALCcontext* pCurContext;
-	ALCdevice* pCurDevice;
-
-	pCurContext = alcGetCurrentContext();
-	pCurDevice = alcGetContextsDevice(pCurContext);
-
-	alcMakeContextCurrent(NULL);
-	alcDestroyContext(pCurContext);
-	alcCloseDevice(pCurDevice);
-
-	return AL_TRUE;
-}
 
 bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 {
@@ -166,10 +38,9 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 	decoder_.SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
 
-	audio_thread_ = std::move(std::thread(&YMediaPlayer::AudioPlayThread, this));
+	audio_->BeginPlayThread();
 
-	//TODO
-	video_thread_ = std::move(std::thread(&YMediaPlayer::VideoPlayThread, this));
+	video_->BeginPlayThread();
 
 
 	printf("SetMediaFromFile\n");
@@ -178,237 +49,51 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 
 bool YMediaPlayer::Play()
 {
-	is_pause_ = false;
-
-	int state;
-	alGetSourcei(source_id_, AL_SOURCE_STATE, &state);
-	if (state == AL_STOPPED || state == AL_INITIAL || state == AL_PAUSED)
-	{
-		alSourcePlay(source_id_);
-	}
+	audio_->Play();
 	return true;
 }
 
 bool YMediaPlayer::Pause()
 {
-	is_manual_stop_ = false;
-	is_pause_ = true;
+	audio_->Pause();
 	return true;
 }
 
 bool YMediaPlayer::Stop()
 {
-	audio_clock_ = 0.0f;
-	video_clock_ = 0.0f;
+	decoder_.ConductAudioBlocking();
+	audio_->Stop();
+	audio_->EndPlayThread();
 
-	is_manual_stop_ = true;
-	is_pause_ = true;
-
-	alSourceStop(source_id_);
-	alSourcei(source_id_, AL_BUFFER, 0x00);
-
-	if (video_thread_.joinable())
-	{
-		decoder_.ConductVideoBlocking();
-		video_thread_.join();
-	}
-
-	if (audio_thread_.joinable())
-	{
-		decoder_.ConductAudioBlocking();
-		audio_thread_.join(); //next time !block here! 
-	}
-
-	CLEAR_MAP(que_map_);
+	decoder_.ConductVideoBlocking();
+	video_->Stop();
+	video_->EndPlayThread();
 
 	decoder_.StopDecode();
 	return true;
 }
 
-bool YMediaPlayer::IsPause()
-{
-	return is_pause_;
-}
 
-bool YMediaPlayer::FillAudioBuff(ALuint& buf)
-{
-	AudioPackageInfo info= decoder_.PopAudioQue();
-	if (info.error!= ERROR_NO_ERROR)
-		return false;
-	alBufferData(buf, AL_FORMAT_STEREO16, info.data, info.size, AUDIO_OUT_SAMPLE_RATE);
-	alSourceQueueBuffers(source_id_, 1, &buf);
-	decoder_.FreeAudioPackageInfo(&info);
-	que_map_[buf] = info.pts;
-	return true;
-}
 
 void YMediaPlayer::Seek(float pos)
 {
 	decoder_.SeekPos(media_info_.dur*pos);
-	audio_clock_ = media_info_.dur*pos;
-	video_clock_ = media_info_.dur*pos;
+	audio_->Seek(pos);
 	
+	video_->Seek(pos);
 }
 
-int YMediaPlayer::AudioPlayThread()
-{
-	is_manual_stop_ = false;
-	//first time ,need to fill the Source
-	for (int i = 0; i < NUMBUFFERS; i++)
-	{
-		if (!FillAudioBuff(audio_buf_[i]))
-		{
-			is_manual_stop_ = true;
-			break;
-		}
-	}
 
-	while ( false == is_manual_stop_)
-	{
-		if ((int)media_info_.dur <= (int)audio_clock_)
-		{
-			printf("EndofAudio \n");
-			decoder_.StopDecode();
-			PlayerStatus st;
-			st.status = PlayerStatus::Done;
-			NotifyPlayerStatus(st);
-			break;
-		}
-
-		if (decoder_.JudgeBlockAudioSeek())
-		{
-			alSourcei(source_id_, AL_BUFFER, 0x00);
-			CLEAR_MAP(que_map_);
-		}
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-		if (IsPause())
-		{
-			continue;
-		}
-		else
-		{
-			Play();
-		}
-
-		ALint processed = 0;
-		alGetSourcei(source_id_, AL_BUFFERS_PROCESSED, &processed);
-		while (processed--)
-		{
-			ALuint bufferID = 0;
-			alSourceUnqueueBuffers(source_id_, 1, &bufferID);
-			audio_clock_ = que_map_[bufferID];
-			if (!FillAudioBuff(bufferID))
-			{
-				continue;
-			}
-		}
-	}
-	return true;
-}
-
-int YMediaPlayer::VideoPlayThread()
-{
-	glfwMakeContextCurrent(g_hwnd);
-	
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-
-	glGenBuffers(1, &vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER,
-		4 * sizeof(GLfloat) * 3,
-		vertexArray, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(0);
-
-	glGenBuffers(1, &texture_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, texture_buffer);
-	glBufferData(GL_ARRAY_BUFFER,
-		4 * sizeof(GLfloat) * 2,
-		texCoord, GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(1);
-
-	//create map texture object
-	glGenTextures(1, &TextureID);
-	glBindTexture(GL_TEXTURE_2D, TextureID);
-	/* Setup some parameters for texture filters and mipmapping */
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-
-	vert_shader = glCreateShader(GL_VERTEX_SHADER);
-	frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	gltLoadShaderFile("C:/Identity.vp", vert_shader);
-	gltLoadShaderFile("C:/Identity.fp", frag_shader);
-
-	glCompileShader(vert_shader);
-	glCompileShader(frag_shader);
-
-	program = glCreateProgram();
-
-	glAttachShader(program, vert_shader);
-	glAttachShader(program, frag_shader);
-
-	glLinkProgram(program);
-
-	while (false == is_manual_stop_)
-	{
-		decoder_.JudgeBlockVideoSeek();
-
-		VideoPackageInfo info = decoder_.PopVideoQue(video_clock_);
-		if (info.error != ERROR_NO_ERROR)
-			continue;
-		video_clock_ = info.pts;
-
-		synchronize_video();
-
-		glTexImage2D(GL_TEXTURE_2D, 0,
-			GL_RGB,
-			info.width, info.height, 0,
-			GL_BGR, GL_UNSIGNED_BYTE, info.data);
-
-
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-		//GLuint sampler_location;
-		glUseProgram(program);
-		//sampler_location = glGetUniformLocation(program, "colorMap");
-		//glUniform1i(sampler_location, 0);
-
-		glBindTexture(GL_TEXTURE_2D, TextureID);
-
-		glBindVertexArray(vao);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-		glBindVertexArray(0);
-
-
-		glfwSwapBuffers(g_hwnd);
-	}
-
-	glfwMakeContextCurrent(NULL);
-	return 1;
-}
 
 void YMediaPlayer::synchronize_video()
 {
-	while (false == is_manual_stop_)
+	while (false == audio_->IsStop())
 	{
-	//	printf("%f,%f \n", video_clock_,audio_clock_);
-		if (video_clock_ <= audio_clock_)
+		printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
+		if (video_->GetClock()<= audio_->GetClock())
 			break;
-		int delayTime = (video_clock_- audio_clock_) * 1000;
+		int delayTime = (video_->GetClock() - audio_->GetClock()) * 1000;
 		delayTime = delayTime > 1 ? 1 : delayTime;
-	//	printf("dealy time:%d\n",delayTime);
 		std::this_thread::sleep_for(std::chrono::milliseconds(delayTime));
 	}
 }
@@ -430,7 +115,47 @@ void YMediaPlayer::OnDecodeError(DecodeError error)
 void YMediaPlayer::OnMediaInfo(MediaInfo info)
 {
 	media_info_ = info;
+	audio_->SetDuration(info.dur);
+	video_->SetDuration(info.dur);
 	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
+}
+
+bool YMediaPlayer::OnAudioDataFunction(char ** data, int *len, double *pts)
+{
+	AudioPackageInfo &&info = decoder_.PopAudioQue();
+	if (info.error == ERROR_NO_ERROR)
+	{
+		*data = (char*)info.data;
+		*len = info.size;
+		*pts = info.pts;
+		return true;
+	}
+	decoder_.FreeAudioPackageInfo(&info);
+	return false;
+}
+
+bool YMediaPlayer::OnVideoDataFunction(char ** data, int *width, int *height, double *pts)
+{
+	VideoPackageInfo  && pkg = decoder_.PopVideoQue(video_->GetClock());
+	if (pkg.error == ERROR_NO_ERROR)
+	{
+		*data = (char*)pkg.data;
+		*width = pkg.width;
+		*height = pkg.height;
+		*pts = pkg.pts;
+		return true;
+	}
+	return false;
+}
+
+bool YMediaPlayer::OnAudioSeekFunction()
+{
+	return decoder_.JudgeBlockAudioSeek();
+}
+
+bool YMediaPlayer::OnVideoSeekFunction()
+{
+	return decoder_.JudgeBlockVideoSeek();
 }
 
 void YMediaPlayer::NotifyPlayerStatus(PlayerStatus st)
@@ -439,52 +164,53 @@ void YMediaPlayer::NotifyPlayerStatus(PlayerStatus st)
 		status_func_(st);
 }
 
-void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
-{
-	if (data == NULL)
-		return;
-
-	static BITMAPINFO *bitMapinfo = NULL;
-	static bool First = TRUE;
-
-	if (First)
-	{
-		BYTE * m_bitBuffer = new BYTE[40 + 4 * 256];//¿ª±ÙÒ»¸öÄÚ´æÇøÓò  
-
-		if (m_bitBuffer == NULL)
-		{
-			return;
-		}
-		First = FALSE;
-		memset(m_bitBuffer, 0, 40 + 4 * 256);
-		bitMapinfo = (BITMAPINFO *)m_bitBuffer;
-		bitMapinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-		bitMapinfo->bmiHeader.biPlanes = 1;
-		for (int i = 0; i < 256; i++)
-		{ //ÑÕÉ«µÄÈ¡Öµ·¶Î§ (0-255)  
-			bitMapinfo->bmiColors[i].rgbBlue = bitMapinfo->bmiColors[i].rgbGreen = bitMapinfo->bmiColors[i].rgbRed = (BYTE)i;
-		}
-	}
-	bitMapinfo->bmiHeader.biHeight = -height;
-	bitMapinfo->bmiHeader.biWidth = width;
-	bitMapinfo->bmiHeader.biBitCount = 3 * 8;
-	RECT drect;
-	GetClientRect(hWnd, &drect);    //pWndÖ¸ÏòCWndÀàµÄÒ»¸öÖ¸Õë   
-	HDC hDC = GetDC(hWnd);     //HDCÊÇWindowsµÄÒ»ÖÖÊý¾ÝÀàÐÍ£¬ÊÇÉè±¸ÃèÊö¾ä±ú£»  
-	SetStretchBltMode(hDC, COLORONCOLOR);
-	StretchDIBits(hDC,
-		0,
-		0,
-		drect.right,   //ÏÔÊ¾´°¿Ú¿í¶È  
-		drect.bottom,  //ÏÔÊ¾´°¿Ú¸ß¶È  
-		0,
-		0,
-		width,      //Í¼Ïñ¿í¶È  
-		height,      //Í¼Ïñ¸ß¶È  
-		data,
-		bitMapinfo,
-		DIB_RGB_COLORS,
-		SRCCOPY
-	);
-	ReleaseDC(hWnd, hDC);
-}
+//
+//void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
+//{
+//	if (data == NULL)
+//		return;
+//
+//	static BITMAPINFO *bitMapinfo = NULL;
+//	static bool First = TRUE;
+//
+//	if (First)
+//	{
+//		BYTE * m_bitBuffer = new BYTE[40 + 4 * 256];//¿ª±ÙÒ»¸öÄÚ´æÇøÓò  
+//
+//		if (m_bitBuffer == NULL)
+//		{
+//			return;
+//		}
+//		First = FALSE;
+//		memset(m_bitBuffer, 0, 40 + 4 * 256);
+//		bitMapinfo = (BITMAPINFO *)m_bitBuffer;
+//		bitMapinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+//		bitMapinfo->bmiHeader.biPlanes = 1;
+//		for (int i = 0; i < 256; i++)
+//		{ //ÑÕÉ«µÄÈ¡Öµ·¶Î§ (0-255)  
+//			bitMapinfo->bmiColors[i].rgbBlue = bitMapinfo->bmiColors[i].rgbGreen = bitMapinfo->bmiColors[i].rgbRed = (BYTE)i;
+//		}
+//	}
+//	bitMapinfo->bmiHeader.biHeight = -height;
+//	bitMapinfo->bmiHeader.biWidth = width;
+//	bitMapinfo->bmiHeader.biBitCount = 3 * 8;
+//	RECT drect;
+//	GetClientRect(hWnd, &drect);    //pWndÖ¸ÏòCWndÀàµÄÒ»¸öÖ¸Õë   
+//	HDC hDC = GetDC(hWnd);     //HDCÊÇWindowsµÄÒ»ÖÖÊý¾ÝÀàÐÍ£¬ÊÇÉè±¸ÃèÊö¾ä±ú£»  
+//	SetStretchBltMode(hDC, COLORONCOLOR);
+//	StretchDIBits(hDC,
+//		0,
+//		0,
+//		drect.right,   //ÏÔÊ¾´°¿Ú¿í¶È  
+//		drect.bottom,  //ÏÔÊ¾´°¿Ú¸ß¶È  
+//		0,
+//		0,
+//		width,      //Í¼Ïñ¿í¶È  
+//		height,      //Í¼Ïñ¸ß¶È  
+//		data,
+//		bitMapinfo,
+//		DIB_RGB_COLORS,
+//		SRCCOPY
+//	);
+//	ReleaseDC(hWnd, hDC);
+//}
