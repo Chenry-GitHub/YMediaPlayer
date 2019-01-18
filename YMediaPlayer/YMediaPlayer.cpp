@@ -14,7 +14,7 @@ YMediaPlayer::YMediaPlayer()
 
 	video_ = new GDIVideo();
 	video_->SetDataFunction(std::bind(&YMediaPlayer::OnVideoDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-	video_->SetSyncToAudioFunction(std::bind(&YMediaPlayer::synchronize_video, this));
+	video_->SetSyncToAudioFunction(std::bind(&YMediaPlayer::OnSynchronizeVideo, this));
 	video_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnVideoSeekFunction, this));
 
 	decoder_.SetErrorFunction(std::bind(&YMediaPlayer::OnDecodeError,this, std::placeholders::_1));
@@ -79,13 +79,12 @@ void YMediaPlayer::Seek(float pos)
 {
 	decoder_.SeekPos(media_info_.dur*pos);
 	audio_->Seek(pos);
-	
 	video_->Seek(pos);
 }
 
 
 
-void YMediaPlayer::synchronize_video()
+void YMediaPlayer::OnSynchronizeVideo()
 {
 	while (false == audio_->IsStop())
 	{
@@ -128,9 +127,10 @@ bool YMediaPlayer::OnAudioDataFunction(char ** data, int *len, double *pts)
 		*data = (char*)info.data;
 		*len = info.size;
 		*pts = info.pts;
+		decoder_.FreeAudioPackageInfo(&info);
 		return true;
 	}
-	decoder_.FreeAudioPackageInfo(&info);
+	
 	return false;
 }
 
@@ -163,54 +163,3 @@ void YMediaPlayer::NotifyPlayerStatus(PlayerStatus st)
 	if (status_func_)
 		status_func_(st);
 }
-
-//
-//void ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
-//{
-//	if (data == NULL)
-//		return;
-//
-//	static BITMAPINFO *bitMapinfo = NULL;
-//	static bool First = TRUE;
-//
-//	if (First)
-//	{
-//		BYTE * m_bitBuffer = new BYTE[40 + 4 * 256];//¿ª±ÙÒ»¸öÄÚ´æÇøÓò  
-//
-//		if (m_bitBuffer == NULL)
-//		{
-//			return;
-//		}
-//		First = FALSE;
-//		memset(m_bitBuffer, 0, 40 + 4 * 256);
-//		bitMapinfo = (BITMAPINFO *)m_bitBuffer;
-//		bitMapinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-//		bitMapinfo->bmiHeader.biPlanes = 1;
-//		for (int i = 0; i < 256; i++)
-//		{ //ÑÕÉ«µÄÈ¡Öµ·¶Î§ (0-255)  
-//			bitMapinfo->bmiColors[i].rgbBlue = bitMapinfo->bmiColors[i].rgbGreen = bitMapinfo->bmiColors[i].rgbRed = (BYTE)i;
-//		}
-//	}
-//	bitMapinfo->bmiHeader.biHeight = -height;
-//	bitMapinfo->bmiHeader.biWidth = width;
-//	bitMapinfo->bmiHeader.biBitCount = 3 * 8;
-//	RECT drect;
-//	GetClientRect(hWnd, &drect);    //pWndÖ¸ÏòCWndÀàµÄÒ»¸öÖ¸Õë   
-//	HDC hDC = GetDC(hWnd);     //HDCÊÇWindowsµÄÒ»ÖÖÊý¾ÝÀàÐÍ£¬ÊÇÉè±¸ÃèÊö¾ä±ú£»  
-//	SetStretchBltMode(hDC, COLORONCOLOR);
-//	StretchDIBits(hDC,
-//		0,
-//		0,
-//		drect.right,   //ÏÔÊ¾´°¿Ú¿í¶È  
-//		drect.bottom,  //ÏÔÊ¾´°¿Ú¸ß¶È  
-//		0,
-//		0,
-//		width,      //Í¼Ïñ¿í¶È  
-//		height,      //Í¼Ïñ¸ß¶È  
-//		data,
-//		bitMapinfo,
-//		DIB_RGB_COLORS,
-//		SRCCOPY
-//	);
-//	ReleaseDC(hWnd, hDC);
-//}

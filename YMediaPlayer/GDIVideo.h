@@ -1,6 +1,5 @@
 #pragma once
 #include "BaseVideo.h"
-
 #include <windows.h>
 
 class GDIVideo :public BaseVideo
@@ -9,6 +8,10 @@ public:
 	GDIVideo();
 	~GDIVideo();
 
+	void SetHwnd(HWND hwnd)
+	{
+		handle_ = hwnd;
+	}
 protected:
 	virtual void PlayThread() override;
 

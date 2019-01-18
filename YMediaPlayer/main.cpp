@@ -88,12 +88,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		static int i = 0;
 		if (i++ % 2)
 		{
-			//g_player->Seek(0.8);
-			g_player->Pause();
+			g_player->Seek(0.8);
+			g_player->Play();
 		}
 		else
 		{
-			//g_player->SetMediaFromFile("C:\\video.mp4");
+			//g_player->SetMediaFromFile("http://hc.yinyuetai.com/uploads/videos/common/1B49016856A8CFADADF10DD94911F124.mp4?sc=8ec89b677a134c67");
+			g_player->Seek(0.2);
 			g_player->Play();
 		}
 	}

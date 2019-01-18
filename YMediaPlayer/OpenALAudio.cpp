@@ -78,6 +78,18 @@ void OpenALAudio::Play()
 	}
 }
 
+void OpenALAudio::Pause()
+{
+	BaseAudio::Pause();
+	int state;
+	alGetSourcei(source_id_, AL_SOURCE_STATE, &state);
+	if (state == AL_STOPPED || state == AL_INITIAL || state == AL_PAUSED)
+	{
+		alSourcePause(source_id_);
+		//TODO notify player status
+	}
+}
+
 void OpenALAudio::Stop()
 {
 	BaseAudio::Stop();

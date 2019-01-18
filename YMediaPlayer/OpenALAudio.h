@@ -22,6 +22,8 @@ public:
 
 	virtual void Play() override;
 
+	virtual void Pause() override;
+
 	virtual void Stop() override; 
 
 protected:

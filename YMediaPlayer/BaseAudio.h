@@ -55,6 +55,11 @@ public:
 		is_playing_ = true;
 	}
 
+	virtual void Pause()
+	{
+		is_playing_ = false;
+	}
+
 	bool IsStop()
 	{
 		return is_stop_;
@@ -68,11 +73,6 @@ public:
 	bool IsPlaying()
 	{
 		return is_playing_;
-	}
-
-	virtual	void Pause()
-	{
-		is_playing_ = false;
 	}
 
 	double GetClock()

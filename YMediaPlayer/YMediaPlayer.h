@@ -35,7 +35,7 @@ public:
 protected:
 
 
-	void synchronize_video();
+	void OnSynchronizeVideo();
 
 	void OnDecodeError(DecodeError error);
 
