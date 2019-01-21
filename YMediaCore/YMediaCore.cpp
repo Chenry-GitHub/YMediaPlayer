@@ -1,4 +1,9 @@
-﻿#include "YMediaPlayer.h"
+﻿#include "YMediaCore.h"
+
+
+#include "BaseAudio.h"
+#include "BaseVideo.h"
+#include "YMediaDecode.h"
 
 #include "OpenALAudio.h"
 #include "OpenGLVideo.h"
@@ -17,8 +22,11 @@ YMediaPlayer::YMediaPlayer()
 	video_->SetSyncToAudioFunction(std::bind(&YMediaPlayer::OnSynchronizeVideo, this));
 	video_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnVideoSeekFunction, this));
 
-	decoder_.SetErrorFunction(std::bind(&YMediaPlayer::OnDecodeError,this, std::placeholders::_1));
-	decoder_.SetMediaFunction(std::bind(&YMediaPlayer::OnMediaInfo, this, std::placeholders::_1));
+
+	decoder_ = new YMediaDecode();
+
+	decoder_->SetErrorFunction(std::bind(&YMediaPlayer::OnDecodeError,this, std::placeholders::_1));
+	decoder_->SetMediaFunction(std::bind(&YMediaPlayer::OnMediaInfo, this, std::placeholders::_1));
 }
 
 YMediaPlayer::~YMediaPlayer()
@@ -35,7 +43,7 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 
 	path_file_ = path_file;
 
-	decoder_.SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
+	decoder_->SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
 
 	audio_->BeginPlayThread();
@@ -61,15 +69,15 @@ bool YMediaPlayer::Pause()
 
 bool YMediaPlayer::Stop()
 {
-	decoder_.ConductAudioBlocking();
+	decoder_->ConductAudioBlocking();
 	audio_->Stop();
 	audio_->EndPlayThread();
 
-	decoder_.ConductVideoBlocking();
+	decoder_->ConductVideoBlocking();
 	video_->Stop();
 	video_->EndPlayThread();
 
-	decoder_.StopDecode();
+	decoder_->StopDecode();
 	return true;
 }
 
@@ -77,7 +85,7 @@ bool YMediaPlayer::Stop()
 
 void YMediaPlayer::Seek(float pos)
 {
-	decoder_.SeekPos(media_info_.dur*pos);
+	decoder_->SeekPos(media_info_.dur*pos);
 	audio_->Seek(pos);
 	video_->Seek(pos);
 }
@@ -121,13 +129,13 @@ void YMediaPlayer::OnMediaInfo(MediaInfo info)
 
 bool YMediaPlayer::OnAudioDataFunction(char ** data, int *len, double *pts)
 {
-	AudioPackageInfo &&info = decoder_.PopAudioQue();
+	AudioPackageInfo &&info = decoder_->PopAudioQue();
 	if (info.error == ERROR_NO_ERROR)
 	{
 		*data = (char*)info.data;
 		*len = info.size;
 		*pts = info.pts;
-		decoder_.FreeAudioPackageInfo(&info);
+		decoder_->FreeAudioPackageInfo(&info);
 		return true;
 	}
 	
@@ -136,7 +144,7 @@ bool YMediaPlayer::OnAudioDataFunction(char ** data, int *len, double *pts)
 
 bool YMediaPlayer::OnVideoDataFunction(char ** data, int *width, int *height, double *pts)
 {
-	VideoPackageInfo  && pkg = decoder_.PopVideoQue(video_->GetClock());
+	VideoPackageInfo  && pkg = decoder_->PopVideoQue(video_->GetClock());
 	if (pkg.error == ERROR_NO_ERROR)
 	{
 		*data = (char*)pkg.data;
@@ -150,12 +158,12 @@ bool YMediaPlayer::OnVideoDataFunction(char ** data, int *width, int *height, do
 
 bool YMediaPlayer::OnAudioSeekFunction()
 {
-	return decoder_.JudgeBlockAudioSeek();
+	return decoder_->JudgeBlockAudioSeek();
 }
 
 bool YMediaPlayer::OnVideoSeekFunction()
 {
-	return decoder_.JudgeBlockVideoSeek();
+	return decoder_->JudgeBlockVideoSeek();
 }
 
 void YMediaPlayer::NotifyPlayerStatus(PlayerStatus st)

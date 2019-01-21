@@ -5,20 +5,7 @@
 #include <thread>
 #include <atomic>
 
-struct PlayerStatus
-{
-	enum Status
-	{
-		Stop =0,
-		Pause ,
-		Playing,
-		During,
-		Done,
-		FileError,
-	};
-	Status status = Pause;
-};
-
+#include "YMediaComm.h"
 
 class BaseAudio
 {

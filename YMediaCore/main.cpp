@@ -8,7 +8,7 @@
 #include <ext.hpp>
 
 
-#include "YMediaPlayer.h"
+#include "YMediaCore.h"
 
 #include "ALEngine.h"
 #include "OpenALAudio.h"

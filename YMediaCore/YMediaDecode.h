@@ -23,60 +23,13 @@ extern "C"
 }
 
 #include "ThreadSafe_Queue.h"
-//#include "Shader.h"
+#include "YMediaComm.h"
 
 
 
-
-enum YMediaCallBackType
-{
-	MEDIA_ERROR,
-};
-
-enum DecodeError
-{
-	ERROR_NO_ERROR = 0,
-	ERROR_NO_QUIT,
-	ERROR_FILE_ERROR,
-	ERROR_PKG_ERROR,
-};
-
-struct MediaInfo
-{
-	double dur;
-	
-};
-
-struct VideoPackageInfo
-{
-	void *data=nullptr;
-	int width;
-	int height;
-	double pts;
-	DecodeError error  = ERROR_NO_ERROR;
-};
-
-
-struct AudioPackageInfo
-{
-	void *data=nullptr;
-	int size = 0;
-	double pts;
-	DecodeError error = ERROR_NO_ERROR;
-};
-
-
-//flag:0 no error
-//flag:1 conduct block queue
-//用于鉴别该包的状态是否可用
-enum FLAG_PKG {
-	FLAG_PLAY=0,
-	FLAG_CONDUCT_QUE,
-	FLAG_FLUSH_DECODEC,
-};
 struct InnerPacketInfo {
 	AVPacket *pkg;
-	FLAG_PKG flag= FLAG_PLAY; 
+	FLAG_PKG flag = FLAG_PLAY;
 };
 
 
