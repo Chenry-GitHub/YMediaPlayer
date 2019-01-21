@@ -267,7 +267,7 @@ void YMediaDecode::DecodeThread()
 		{
 			if (audio_ctx->IsValid())
 			{
-				if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_seek_convert_dur_, AVSEEK_FLAG_BACKWARD) >= 0)
+				if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_seek_convert_dur_, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME) >= 0)
 				{
 					EmptyAudioQue();
 					avcodec_flush_buffers(audio_ctx->codec_ctx_);
@@ -276,7 +276,7 @@ void YMediaDecode::DecodeThread()
 			
 			if (video_ctx->IsValid())
 			{
-				if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_seek_convert_dur_, AVSEEK_FLAG_BACKWARD) >= 0)
+				if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_seek_convert_dur_, AVSEEK_FLAG_BACKWARD|AVSEEK_FLAG_FRAME) >= 0)
 				{
 					EmptyVideoQue();
 					avcodec_flush_buffers(video_ctx->codec_ctx_);

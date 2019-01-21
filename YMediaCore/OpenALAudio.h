@@ -35,5 +35,7 @@ private:
 	ALuint		source_id_;
 	ALuint audio_buf_[NUMBUFFERS];
 	std::map<ALuint, double> que_map_;
+
+	
 };
 

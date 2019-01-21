@@ -1,5 +1,7 @@
 #include "OpenALAudio.h"
 
+#include <fstream>
+std::ofstream out_file;
 
 
 #define CLEAR_MAP(map_ )  \
@@ -26,6 +28,8 @@ OpenALAudio::OpenALAudio()
 	alListener3f(AL_POSITION, 0, 0, 0);
 
 	alGenBuffers(NUMBUFFERS, audio_buf_);
+
+	out_file.open("C:/out_test.pcm", std::ios::binary);
 }
 
 
@@ -34,6 +38,8 @@ OpenALAudio::~OpenALAudio()
 	Stop();//可能退出错误，play线程被阻塞时
 	alDeleteBuffers(NUMBUFFERS, audio_buf_);
 	alDeleteSources(1, &source_id_);
+
+	out_file.close();
 }
 
 int OpenALAudio::InitPlayer()
@@ -172,6 +178,7 @@ bool OpenALAudio::FillAudioBuff(ALuint& buf)
 		{
 			return false;
 		}
+		out_file.write(data, len);
 		alBufferData(buf, AL_FORMAT_STEREO16, data, len, AUDIO_OUT_SAMPLE_RATE);
 		alSourceQueueBuffers(source_id_, 1, &buf);
 		que_map_[buf] = clock;

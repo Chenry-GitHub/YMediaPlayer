@@ -65,7 +65,7 @@ public:
 		return is_stop_;
 	}
 
-	void Seek(float percent)
+	virtual void Seek(float percent)
 	{
 		clock_= duration_*percent;
 	}
