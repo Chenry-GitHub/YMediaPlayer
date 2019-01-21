@@ -10,7 +10,15 @@
 class BaseAudio
 {
 public:
-	BaseAudio() { Stop(); }
+	BaseAudio()
+		:data_func_(nullptr)
+		, status_func_(nullptr)
+		, dur_func_(nullptr)
+		, cur_func_(nullptr)
+		, seek_func_(nullptr)
+	{ 
+		Stop(); 
+	}
 	~BaseAudio(){}
 
 	void BeginPlayThread()

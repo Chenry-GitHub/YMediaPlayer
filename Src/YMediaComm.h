@@ -1,5 +1,17 @@
 #pragma once
 
+enum VideoPlayMode
+{
+	MODE_GDI,
+	MODE_OPENGL,
+};
+
+enum AudioPlayMode
+{
+	MODE_OPENAL,
+};
+
+
 struct PlayerStatus
 {
 	enum Status

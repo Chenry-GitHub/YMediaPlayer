@@ -24,21 +24,25 @@ class BaseVideo;
 class YMEDIA_DECL YMediaPlayer
 {
 public:
-	YMediaPlayer();
+	YMediaPlayer(AudioPlayMode audio_mode= MODE_OPENAL,VideoPlayMode video_mode=MODE_GDI);
 	~YMediaPlayer();
-
+	
 	bool SetMediaFromFile(const std::string & path_file);
-
-//	bool SetMediaFromUrl(const std::string & stream_url);
-
+	
 	bool Play();
 
 	bool Pause();
 
 	bool Stop();
 
-
 	void Seek(float pos);
+
+	void SetDisplayWindow(void*);
+
+	void SetDurationChangedFunction(std::function<void(int dur)> func);
+
+	void SetCurrentChangedFucnton(std::function<void(int cur)> func);
+
 protected:
 
 
@@ -66,6 +70,9 @@ private:
 	
 	//this is for synchronization
 	std::function<void(PlayerStatus)> status_func_;
+
+	std::function<void(int)> dur_func_;
+	std::function<void(int)> cur_func_;
 
 
 	BaseAudio * audio_;

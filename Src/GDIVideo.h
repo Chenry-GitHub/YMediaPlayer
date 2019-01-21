@@ -12,6 +12,9 @@ public:
 	{
 		handle_ = hwnd;
 	}
+
+	virtual void SetDisplay(void *) override;
+
 protected:
 	virtual void PlayThread() override;
 

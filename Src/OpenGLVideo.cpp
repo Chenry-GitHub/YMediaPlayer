@@ -76,9 +76,14 @@ OpenGLVideo::~OpenGLVideo()
 {
 }
 
+void OpenGLVideo::SetDisplay(void *win)
+{
+	win_ = (GLFWwindow *)win;
+}
+
 void OpenGLVideo::PlayThread()
 {
-	//glfwMakeContextCurrent(g_hwnd);
+	glfwMakeContextCurrent(win_);
 	
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);

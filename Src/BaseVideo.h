@@ -9,6 +9,8 @@ public:
 	BaseVideo() {}
 	~BaseVideo(){}
 
+	virtual void SetDisplay(void *) = 0;
+
 	void BeginPlayThread()
 	{
 		is_stop_ = false;

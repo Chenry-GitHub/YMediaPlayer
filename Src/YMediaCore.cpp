@@ -10,21 +10,38 @@
 #include "GDIVideo.h"
 
 
-YMediaPlayer::YMediaPlayer()
+YMediaPlayer::YMediaPlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 	:status_func_(nullptr)
 {
-	audio_ = new OpenALAudio();
+	//this is for initialize audio
+	switch (audio_mode)
+	{
+		case MODE_OPENAL:
+		{
+			OpenALAudio::InitPlayer();
+			audio_ = new OpenALAudio();
+			break;
+		}
+	}
 	audio_->SetDataFunction(std::bind(&YMediaPlayer::OnAudioDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	audio_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnAudioSeekFunction, this));
 
-	video_ = new GDIVideo();
-	video_->SetDataFunction(std::bind(&YMediaPlayer::OnVideoDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+	//this is for video mode
+	switch (video_mode)
+	{
+	case MODE_GDI:
+		video_ = new GDIVideo();
+		break;
+	case MODE_OPENGL:
+		video_ = new OpenGLVideo();
+		break;
+	}
+	video_->SetDataFunction(std::bind(&YMediaPlayer::OnVideoDataFunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 	video_->SetSyncToAudioFunction(std::bind(&YMediaPlayer::OnSynchronizeVideo, this));
 	video_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnVideoSeekFunction, this));
 
 
 	decoder_ = new YMediaDecode();
-
 	decoder_->SetErrorFunction(std::bind(&YMediaPlayer::OnDecodeError,this, std::placeholders::_1));
 	decoder_->SetMediaFunction(std::bind(&YMediaPlayer::OnMediaInfo, this, std::placeholders::_1));
 }
@@ -90,7 +107,21 @@ void YMediaPlayer::Seek(float pos)
 	video_->Seek(pos);
 }
 
+void YMediaPlayer::SetDisplayWindow(void* handle)
+{
+	video_->SetDisplay(handle);
+}
 
+void YMediaPlayer::SetDurationChangedFunction(std::function<void(int dur)> func)
+{
+	dur_func_ = func;
+}
+
+void YMediaPlayer::SetCurrentChangedFucnton(std::function<void(int cur)> func)
+{
+	cur_func_ = func;
+	audio_->SetProgressFunction(func);
+}
 
 void YMediaPlayer::OnSynchronizeVideo()
 {
@@ -124,6 +155,9 @@ void YMediaPlayer::OnMediaInfo(MediaInfo info)
 	media_info_ = info;
 	audio_->SetDuration(info.dur);
 	video_->SetDuration(info.dur);
+	
+	if(dur_func_)
+		dur_func_(info.dur);
 	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
 }
 

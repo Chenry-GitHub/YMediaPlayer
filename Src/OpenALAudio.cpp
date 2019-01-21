@@ -161,6 +161,10 @@ void OpenALAudio::PlayThread()
 			ALuint bufferID = 0;
 			alSourceUnqueueBuffers(source_id_, 1, &bufferID);
 			clock_ = que_map_[bufferID];
+			if (cur_func_)
+			{
+				cur_func_(clock_);
+			}
 			if (!FillAudioBuff(bufferID))
 			{
 				continue;

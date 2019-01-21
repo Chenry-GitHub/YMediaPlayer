@@ -13,6 +13,11 @@ GDIVideo::~GDIVideo()
 {
 }
 
+void GDIVideo::SetDisplay(void *handle)
+{
+	handle_ = (HWND)handle;
+}
+
 void GDIVideo::PlayThread()
 {
 	while (false == is_stop_)

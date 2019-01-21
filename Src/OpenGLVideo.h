@@ -12,6 +12,10 @@ class OpenGLVideo:public BaseVideo
 public:
 	OpenGLVideo();
 	~OpenGLVideo();
+;
+
+virtual void SetDisplay(void *) override;
+
 protected:
 	virtual void PlayThread() override;
 
@@ -22,5 +26,6 @@ protected:
 	GLuint TextureID;
 	GLuint vert_shader, frag_shader;
 	GLuint program;
+	GLFWwindow * win_;
 };
 
