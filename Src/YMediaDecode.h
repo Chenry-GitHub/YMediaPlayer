@@ -336,9 +336,9 @@ class VideoConvertManger
 public:
 	VideoConvertManger(int width,int height,AVPixelFormat fmt)
 	{
-		int pic_size_ = avpicture_get_size(AV_PIX_FMT_RGB24, width, height);
+		int pic_size_ = av_image_get_buffer_size(AV_PIX_FMT_RGB24, width, height,1);
 		pic_buff = (uint8_t*)av_malloc(pic_size_);
-		avpicture_fill((AVPicture *)(rgb_frame_.frame_), pic_buff, AV_PIX_FMT_RGB24, width, height);
+		av_image_fill_arrays(rgb_frame_.frame_->data, rgb_frame_.frame_->linesize, pic_buff, AV_PIX_FMT_RGB24, width, height,1);
 		video_convert_ctx_ = sws_getContext(width, height, fmt, width, height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL, NULL, NULL);
 
 	}
