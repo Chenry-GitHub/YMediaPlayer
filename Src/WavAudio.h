@@ -13,7 +13,7 @@ public:
 	WavAudio();
 	~WavAudio();
 
-	bool InitPlayer(int sample_rate, int channels, int bytes_persec);
+	bool InitPlayer(int sample_rate, int channels);
 	
 	virtual void Seek(float percent) override;
 

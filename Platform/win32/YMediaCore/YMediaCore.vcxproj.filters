@@ -26,6 +26,9 @@
     <ClCompile Include="..\..\..\Src\GDIVideo.cpp">
       <Filter>FileTree</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Src\WavAudio.cpp">
+      <Filter>FileTree</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Src\YMediaCore.h">
@@ -53,6 +56,9 @@
       <Filter>FileTree</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Src\GDIVideo.h">
+      <Filter>FileTree</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Src\WavAudio.h">
       <Filter>FileTree</Filter>
     </ClInclude>
   </ItemGroup>

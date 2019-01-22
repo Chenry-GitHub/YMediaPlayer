@@ -7,8 +7,7 @@
 #include <map>
 
 #define NUMBUFFERS              4
-#define  AUDIO_OUT_SAMPLE_RATE 44100
-#define AUDIO_OUT_CHANNEL 2
+
 
 
 class OpenALAudio : public BaseAudio

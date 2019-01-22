@@ -153,6 +153,7 @@
     <ClCompile Include="..\..\..\Src\GDIVideo.cpp" />
     <ClCompile Include="..\..\..\Src\OpenALAudio.cpp" />
     <ClCompile Include="..\..\..\Src\OpenGLVideo.cpp" />
+    <ClCompile Include="..\..\..\Src\WavAudio.cpp" />
     <ClCompile Include="..\..\..\Src\YMediaCore.cpp" />
     <ClCompile Include="..\..\..\Src\YMediaDecode.cpp" />
   </ItemGroup>
@@ -163,6 +164,7 @@
     <ClInclude Include="..\..\..\Src\OpenALAudio.h" />
     <ClInclude Include="..\..\..\Src\OpenGLVideo.h" />
     <ClInclude Include="..\..\..\Src\ThreadSafe_Queue.h" />
+    <ClInclude Include="..\..\..\Src\WavAudio.h" />
     <ClInclude Include="..\..\..\Src\YMediaComm.h" />
     <ClInclude Include="..\..\..\Src\YMediaCore.h" />
     <ClInclude Include="..\..\..\Src\YMediaDecode.h" />

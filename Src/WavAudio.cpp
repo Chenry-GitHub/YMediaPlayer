@@ -5,13 +5,13 @@
 #pragma comment(lib,"winmm.lib")
 
 
-#define BLOCK_SIZE 4096
+#define BLOCK_SIZE 9216 //4608*2
 #define BLOCK_COUNT 10
 
 WavAudio::WavAudio()
 	:is_seek_(false)
 {
-	InitPlayer(44100, 2, 4096);
+	InitPlayer(AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	
 }
 
@@ -67,13 +67,15 @@ void WavAudio::PlayThread()
 
 	while (false == is_stop_)
 	{
+		seek_func_();
+
 		if (!is_playing_)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			continue;
 		}
 
-		if (seek_func_())
+		if (is_seek_)
 		{
 			WaitForPlayDone();
 			is_seek_ = false;
@@ -87,64 +89,47 @@ void WavAudio::PlayThread()
 			continue;
 		}
 		
-		WAVEHDR* current;
-		int remain;
-		current = &waveBlocks_[waveCurrentBlock_];
-		while (len > 0) {
-			/*
-			* first make sure the header we're going to use is unprepared
-			*/
-			if (current->dwFlags & WHDR_PREPARED)
+		WAVEHDR* current= &waveBlocks_[waveCurrentBlock_];
+
+		/*
+		* first make sure the header we're going to use is unprepared
+		*/
+		if (current->dwFlags & WHDR_PREPARED)
+		{
+			clock_ = clock_map_[waveCurrentBlock_];
+			if (cur_func_)
 			{
-				clock_ = clock_map_[waveCurrentBlock_];
-				if (cur_func_)
-				{
-					cur_func_(clock_);
-				}
-				waveOutUnprepareHeader(hWaveOut_, current, sizeof(WAVEHDR));
-
-
+				cur_func_(clock_);
 			}
-			if (len < (int)(BLOCK_SIZE - current->dwUser)) {
-				memcpy(current->lpData + current->dwUser, data, len);
-				current->dwUser += len;
-				break;
-
-			}
-			remain = BLOCK_SIZE - current->dwUser;
-			memcpy(current->lpData + current->dwUser, data, remain);
-			len -= remain;
-			data += remain;
-			current->dwBufferLength = BLOCK_SIZE;
-			waveOutPrepareHeader(hWaveOut_, current, sizeof(WAVEHDR));
-			waveOutWrite(hWaveOut_, current, sizeof(WAVEHDR));
-
-			clock_map_[waveCurrentBlock_] = clock;
-
-			waveFreeBlockCount_--;
-			
-
-			/*
-			* wait for a block to become free
-			*/
-			while (0 == waveFreeBlockCount_)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-			
-
-			/*
-			* point to the next block
-			*/
-			waveCurrentBlock_++;
-			waveCurrentBlock_ %= BLOCK_COUNT;
-			current = &waveBlocks_[waveCurrentBlock_];
-			current->dwUser = 0;
-
+			waveOutUnprepareHeader(hWaveOut_, current, sizeof(WAVEHDR));
 		}
+
+		
+		memcpy(current->lpData , data, len);
+		current->dwBufferLength = len;
+		waveOutPrepareHeader(hWaveOut_, current, sizeof(WAVEHDR));
+		waveOutWrite(hWaveOut_, current, sizeof(WAVEHDR));
+
+		clock_map_[waveCurrentBlock_] = clock;
+
+		waveFreeBlockCount_--;
+		/*
+		* wait for a block to become free
+		*/
+		while (0 == waveFreeBlockCount_)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+			
+
+		/*
+		* point to the next block
+		*/
+		waveCurrentBlock_++;
+		waveCurrentBlock_ %= BLOCK_COUNT;
+		current = &waveBlocks_[waveCurrentBlock_];
+		current->dwUser = 0;
 	}
-
-
 }
 
 void WavAudio::WaitForPlayDone()
@@ -174,27 +159,13 @@ void WavAudio::Stop()
 WavAudio::~WavAudio()
 {
 	WaitForPlayDone();
-	/*
-	* unprepare any blocks that are still prepared
-	*/
-	for (int i = 0; i < waveFreeBlockCount_; i++)
-	{
-		if (waveBlocks_[i].dwFlags &WHDR_PREPARED)
-		{
-			if (WAVERR_STILLPLAYING == waveOutUnprepareHeader(hWaveOut_, &waveBlocks_[i], sizeof(WAVEHDR)))
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-		}
-	}
-
 	freeBlocks(waveBlocks_);
 	waveOutClose(hWaveOut_);
 
 }
 
 
-bool WavAudio::InitPlayer(int sample_rate,int channels, int bytes_persec)
+bool WavAudio::InitPlayer(int sample_rate,int channels)
 {
 	WAVEFORMATEX wfx; /* look this up in your documentation */
 					  /*
@@ -213,7 +184,7 @@ bool WavAudio::InitPlayer(int sample_rate,int channels, int bytes_persec)
 	wfx.cbSize = 0; /* size of _extra_ info */
 	wfx.wFormatTag = WAVE_FORMAT_PCM;
 	wfx.nBlockAlign = (wfx.wBitsPerSample * wfx.nChannels) >> 3;
-	wfx.nAvgBytesPerSec = bytes_persec;
+	wfx.nAvgBytesPerSec = sample_rate*channels*2;
 	/*
 	* try to open the default wave device. WAVE_MAPPER is
 	* a constant defined in mmsystem.h, it always points to the

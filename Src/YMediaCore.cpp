@@ -26,6 +26,7 @@ YMediaPlayer::YMediaPlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 		case MODE_WIN_WAV:
 		{
 			audio_ = new WavAudio();
+
 			break;
 		}
 	}

@@ -7,6 +7,9 @@
 
 #include "YMediaComm.h"
 
+#define  AUDIO_OUT_SAMPLE_RATE 44100
+#define  AUDIO_OUT_CHANNEL 2
+
 class BaseAudio
 {
 public:
