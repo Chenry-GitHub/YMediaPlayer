@@ -2,12 +2,13 @@
 
 enum VideoPlayMode
 {
-	MODE_GDI,
+	MODE_WIN_GDI,
 	MODE_OPENGL,
 };
 
 enum AudioPlayMode
 {
+	MODE_WIN_WAV,
 	MODE_OPENAL,
 };
 

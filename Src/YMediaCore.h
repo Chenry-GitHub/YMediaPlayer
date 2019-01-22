@@ -24,7 +24,7 @@ class BaseVideo;
 class YMEDIA_DECL YMediaPlayer
 {
 public:
-	YMediaPlayer(AudioPlayMode audio_mode= MODE_OPENAL,VideoPlayMode video_mode=MODE_GDI);
+	YMediaPlayer(AudioPlayMode audio_mode= MODE_OPENAL,VideoPlayMode video_mode=MODE_WIN_GDI);
 	~YMediaPlayer();
 	
 	bool SetMediaFromFile(const std::string & path_file);
