@@ -130,17 +130,18 @@ void YMediaPlayer::SetCurrentChangedFucnton(std::function<void(int cur)> func)
 	audio_->SetProgressFunction(func);
 }
 
-void YMediaPlayer::OnSynchronizeVideo()
+bool YMediaPlayer::OnSynchronizeVideo()
 {
 	while (false == audio_->IsStop())
 	{
 		printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
 		if (video_->GetClock()<= audio_->GetClock())
-			break;
+			return true;
 		int delayTime = (video_->GetClock() - audio_->GetClock()) * 1000;
 		delayTime = delayTime > 1 ? 1 : delayTime;
 		std::this_thread::sleep_for(std::chrono::milliseconds(delayTime));
 	}
+	return false;
 }
 
 void YMediaPlayer::OnDecodeError(DecodeError error)

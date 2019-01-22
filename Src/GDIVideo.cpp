@@ -35,9 +35,10 @@ void GDIVideo::PlayThread()
 
 		clock_ = pts;
 		
-		sync_func_();
-
-		ShowRGBToWnd(handle_, (BYTE*)data, width, height);
+		if (sync_func_())
+		{
+			ShowRGBToWnd(handle_, (BYTE*)data, width, height);
+		}
 	}
 }
 

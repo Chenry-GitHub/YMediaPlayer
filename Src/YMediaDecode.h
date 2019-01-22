@@ -107,8 +107,8 @@ private:
 	atomic_int sample_rate_;
 	atomic_int channel_;
 	atomic_bool is_seek_;
-	std::atomic<long long > audio_seek_convert_dur_;
-	std::atomic<long long > video_seek_convert_dur_;
+	atomic_long audio_seek_convert_dur_;
+	atomic_long video_seek_convert_dur_;
 
 	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
 	ThreadSafe_Queue<VideoPackageInfo> video_que_;

@@ -55,7 +55,7 @@ public:
 		data_func_ = func;
 	}
 
-	inline void SetSyncToAudioFunction(std::function <void()> func)
+	inline void SetSyncToAudioFunction(std::function <bool()> func)
 	{
 		sync_func_ = func;
 	}
@@ -75,6 +75,6 @@ protected:
 
 	std::function <bool(char ** data, int *width, int *height, double *pts)> data_func_;
 
-	std::function <void()> sync_func_;
+	std::function <bool()> sync_func_;
 };
 
