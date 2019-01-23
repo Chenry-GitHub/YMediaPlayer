@@ -2,29 +2,15 @@
 
 #include <atomic>
 #include <thread>
+#include "BaseControl.h"
 
-class BaseVideo
+class BaseVideo:public BaseControl
 {
 public:
 	BaseVideo() {}
 	~BaseVideo(){}
 
 	virtual void SetDisplay(void *) = 0;
-
-	void BeginPlayThread()
-	{
-		is_stop_ = false;
-		play_thread_ = std::move(std::thread(&BaseVideo::PlayThread, this));
-	}
-
-	void EndPlayThread()
-	{
-		if (play_thread_.joinable())
-		{
-			is_stop_ = true;
-			play_thread_.join();
-		}
-	}
 
 	void Seek(float percent)
 	{
@@ -39,11 +25,6 @@ public:
 	void SetDuration(double dur)
 	{
 		duration_= dur;
-	}
-
-	void Stop()
-	{
-		is_stop_ = true;
 	}
 
 	inline void SetBlockSeekFunction(std::function<bool()> func) {
@@ -63,13 +44,8 @@ public:
 
 protected:
 
-	virtual void PlayThread() =0;
 
-	double clock_;
-	double duration_;
-	std::atomic_bool is_stop_;
-
-	std::thread play_thread_;
+	
 
 	std::function<bool()> seek_func_;
 

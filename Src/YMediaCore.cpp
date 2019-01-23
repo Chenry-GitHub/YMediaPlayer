@@ -60,7 +60,7 @@ YMediaPlayer::~YMediaPlayer()
 }
 
 
-bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
+bool YMediaPlayer::SetMediaFromFile(const char* path_file)
 {
 	Stop();
 	printf("Stop\n");
@@ -82,13 +82,20 @@ bool YMediaPlayer::SetMediaFromFile(const std::string & path_file)
 bool YMediaPlayer::Play()
 {
 	audio_->Play();
+	video_->Play();
 	return true;
 }
 
 bool YMediaPlayer::Pause()
 {
 	audio_->Pause();
+	video_->Pause();
 	return true;
+}
+
+bool YMediaPlayer::IsPlaying()
+{
+	return audio_->IsPlaying();
 }
 
 bool YMediaPlayer::Stop()
@@ -119,12 +126,12 @@ void YMediaPlayer::SetDisplayWindow(void* handle)
 	video_->SetDisplay(handle);
 }
 
-void YMediaPlayer::SetDurationChangedFunction(std::function<void(int dur)> func)
+void YMediaPlayer::SetDurationChangedFunction(DurFunc func)
 {
 	dur_func_ = func;
 }
 
-void YMediaPlayer::SetCurrentChangedFucnton(std::function<void(int cur)> func)
+void YMediaPlayer::SetCurrentChangedFucnton(CurFunc func)
 {
 	cur_func_ = func;
 	audio_->SetProgressFunction(func);
@@ -132,12 +139,12 @@ void YMediaPlayer::SetCurrentChangedFucnton(std::function<void(int cur)> func)
 
 bool YMediaPlayer::OnSynchronizeVideo()
 {
-	while (false == audio_->IsStop())
+	while (!audio_->IsStop())
 	{
 		//printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
 		if (video_->GetClock()<= audio_->GetClock())
 			return true;
-		int delayTime = (video_->GetClock() - audio_->GetClock()) * 1000;
+		int delayTime = static_cast<int>((video_->GetClock() - audio_->GetClock()) * 1000);
 		delayTime = delayTime > 1 ? 1 : delayTime;
 		std::this_thread::sleep_for(std::chrono::milliseconds(delayTime));
 	}
@@ -165,7 +172,7 @@ void YMediaPlayer::OnMediaInfo(MediaInfo info)
 	video_->SetDuration(info.dur);
 	
 	if(dur_func_)
-		dur_func_(info.dur);
+		dur_func_((int)info.dur);
 	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
 }
 

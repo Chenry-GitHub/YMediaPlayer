@@ -10,6 +10,7 @@ class TEST : public QMainWindow
 
 public:
 	TEST(QWidget *parent = Q_NULLPTR);
+	~TEST();
 signals:
 	void sig_Dur(int);
 
