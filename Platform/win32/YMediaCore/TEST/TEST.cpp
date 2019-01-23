@@ -21,14 +21,14 @@ TEST::TEST(QWidget *parent)
 		ui.slider_media->setMaximum(dur);
 		ui.slider_media->setMinimum(0);
 		ui.slider_media->setValue(0);
-	},Qt::BlockingQueuedConnection);
+	},Qt::QueuedConnection);
 
 	QObject::connect(this, &TEST::sig_Pos, this, [&](int curpos) {
 		QTime tim(curpos / 3600, curpos / 60, curpos % 60, 0);
 		QString str = tim.toString("hh:mm:ss");
 		ui.lab_cur->setText(str);
 		ui.slider_media->setValue(curpos);
-	}, Qt::BlockingQueuedConnection);
+	}, Qt::QueuedConnection);
 
 	QObject::connect(ui.slider_media, &DerSlider::sig_Clicked, this, [&](float value)
 	{
