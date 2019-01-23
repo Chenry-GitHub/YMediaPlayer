@@ -22,7 +22,14 @@ void GDIVideo::PlayThread()
 {
 	while (false == is_stop_)
 	{
+		
 		seek_func_();
+
+		if (!IsPlaying())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			continue;
+		}
 
 		char *data;
 		int width;

@@ -69,7 +69,7 @@ void WavAudio::PlayThread()
 	{
 		seek_func_();
 
-		if (!is_playing_)
+		if (!IsPlaying())
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			continue;
@@ -201,8 +201,9 @@ bool WavAudio::InitPlayer(int sample_rate,int channels)
 
 		//fprintf(stderr, "%s: unable toopen wave mapper device\n", argv[0]);
 		ExitProcess(1);
-
+		return false;
 	}
+	return true;
 }
 
 void CALLBACK WavAudio::waveOutProc(
