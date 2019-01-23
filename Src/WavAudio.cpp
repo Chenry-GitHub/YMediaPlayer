@@ -130,6 +130,8 @@ void WavAudio::PlayThread()
 		current = &waveBlocks_[waveCurrentBlock_];
 		current->dwUser = 0;
 	}
+	WaitForPlayDone();
+
 }
 
 void WavAudio::WaitForPlayDone()
@@ -150,15 +152,10 @@ void WavAudio::Seek(float percent)
 	is_seek_ = true;
 }
 
-void WavAudio::Stop()
-{
-	WaitForPlayDone();
-	BaseAudio::Stop();
-}
 
 WavAudio::~WavAudio()
 {
-	WaitForPlayDone();
+	
 	freeBlocks(waveBlocks_);
 	waveOutClose(hWaveOut_);
 

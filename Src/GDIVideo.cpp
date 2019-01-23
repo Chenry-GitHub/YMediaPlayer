@@ -5,7 +5,7 @@
 GDIVideo::GDIVideo()
 	:handle_(false)
 {
-	handle_ = (HWND)0x016D0D48;
+
 }
 
 

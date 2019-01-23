@@ -17,8 +17,6 @@ public:
 	
 	virtual void Seek(float percent) override;
 
-	virtual void Stop() override;
-
 protected:
 
 

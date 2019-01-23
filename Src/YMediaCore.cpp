@@ -134,7 +134,7 @@ bool YMediaPlayer::OnSynchronizeVideo()
 {
 	while (false == audio_->IsStop())
 	{
-		printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
+		//printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
 		if (video_->GetClock()<= audio_->GetClock())
 			return true;
 		int delayTime = (video_->GetClock() - audio_->GetClock()) * 1000;
