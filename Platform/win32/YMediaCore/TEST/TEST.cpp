@@ -23,6 +23,7 @@ TEST::TEST(QWidget *parent)
 		ui.slider_media->setValue(0);
 	},Qt::QueuedConnection);
 
+
 	QObject::connect(this, &TEST::sig_Pos, this, [&](int curpos) {
 		QTime tim(curpos / 3600, curpos / 60, curpos % 60, 0);
 		QString str = tim.toString("hh:mm:ss");
