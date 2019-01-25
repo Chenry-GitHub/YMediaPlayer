@@ -1,5 +1,6 @@
 #include "TEST.h"
 #include "DerSlider.h"
+
 #include "YMediaCore.h"
 
 #include <QTime>
@@ -63,7 +64,7 @@ TEST::TEST(QWidget *parent)
 	});
 	player_->SetCurrentChangedFucnton([](int cur){
 		emit g_global_->sig_Pos(cur);
-	});
+	}); 
 }
 
 TEST::~TEST()

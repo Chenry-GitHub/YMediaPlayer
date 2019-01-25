@@ -97,6 +97,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glew32s.lib;glew32.lib;glfw3.lib;OPENGL32.lib;glu32.lib;OpenAL32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../../../Src/glfw/lib-vc2015;../../../Src/glew/glew-2.1.0/lib/Release/Win32;../../../ffmpeg-4.1-win32-dev/lib;../../../OpenAL 1.1 SDK/libs/win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/SAFESEH:no %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -130,6 +131,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glew32s.lib;glew32.lib;glfw3.lib;OPENGL32.lib;glu32.lib;OpenAL32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../../../Src/glfw/lib-vc2015;../../../Src/glew/glew-2.1.0/lib/Release/Win32;../../../ffmpeg-4.1-win32-dev/lib;../../../OpenAL 1.1 SDK/libs/win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/SAFESEH:no %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -160,6 +162,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\Src\BaseAudio.h" />
     <ClInclude Include="..\..\..\Src\BaseControl.h" />
+    <ClInclude Include="..\..\..\Src\BasePlatform.h" />
     <ClInclude Include="..\..\..\Src\BaseVideo.h" />
     <ClInclude Include="..\..\..\Src\GDIVideo.h" />
     <ClInclude Include="..\..\..\Src\OpenALAudio.h" />

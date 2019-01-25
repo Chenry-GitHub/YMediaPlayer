@@ -64,5 +64,8 @@
     <ClInclude Include="..\..\..\Src\BaseControl.h">
       <Filter>FileTree</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Src\BasePlatform.h">
+      <Filter>FileTree</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
