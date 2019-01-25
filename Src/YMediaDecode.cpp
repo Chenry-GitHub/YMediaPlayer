@@ -49,6 +49,7 @@ bool YMediaDecode::StartDecode()
 
 void YMediaDecode::EmptyAudioQue()
 {
+	std::lock_guard<std::mutex> lg(audio_seek_mutex_);
 	while (!audio_inner_que_.IsEmpty())
 	{
 		InnerPacketInfo pkg_info;
@@ -71,6 +72,7 @@ void YMediaDecode::EmptyAudioQue()
 
 void YMediaDecode::EmptyVideoQue()
 {
+	std::lock_guard<std::mutex> lg(video_seek_mutex_);
 	while (!video_inner_que_.IsEmpty())
 	{
 		InnerPacketInfo pkg_info;
@@ -107,7 +109,12 @@ AudioPackageInfo YMediaDecode::PopAudioQue()
 	audio_inner_que_.WaitPop(pkg_info);
 	if (FLAG_PLAY == pkg_info.flag )
 	{
+		std::lock_guard<std::mutex> lg(audio_seek_mutex_);
 		DoConvertAudio(pkg_info.pkg);
+		av_packet_unref(pkg_info.pkg);
+		av_packet_free(&pkg_info.pkg);
+		audio_que_.TryPop(info);
+		return info;
 	}
 	else
 	{
@@ -128,7 +135,12 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 	video_inner_que_.WaitPop(pkg_info);
 	if (FLAG_PLAY == pkg_info.flag )
 	{
+		std::lock_guard<std::mutex> lg(video_seek_mutex_);
 		DoConvertVideo(pkg_info.pkg, cur_clock);
+		av_packet_unref(pkg_info.pkg);
+		av_packet_free(&pkg_info.pkg);
+		video_que_.TryPop(info);
+		return info;
 	}
 	else
 	{
@@ -267,7 +279,7 @@ void YMediaDecode::DecodeThread()
 		{
 			if (audio_ctx->IsValid())
 			{
-				if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_seek_convert_dur_, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME) >= 0)
+				if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_seek_convert_dur_, AVSEEK_FLAG_FRAME) >= 0)
 				{
 					EmptyAudioQue();
 					avcodec_flush_buffers(audio_ctx->codec_ctx_);
@@ -276,7 +288,7 @@ void YMediaDecode::DecodeThread()
 			
 			if (video_ctx->IsValid())
 			{
-				if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_seek_convert_dur_, AVSEEK_FLAG_BACKWARD|AVSEEK_FLAG_FRAME) >= 0)
+				if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_seek_convert_dur_, AVSEEK_FLAG_FRAME) >= 0)
 				{
 					EmptyVideoQue();
 					avcodec_flush_buffers(video_ctx->codec_ctx_);
@@ -285,10 +297,10 @@ void YMediaDecode::DecodeThread()
 			is_seek_ = false;
 		}
 
-		if (video_inner_que_.GetSize() >= QUE_VIDEO_INNER_SIZE || audio_inner_que_.GetSize() >= QUE_AUDIO_INNER_SIZE)
-		{
-			continue;
-		}
+		//if (video_inner_que_.GetSize() >= QUE_VIDEO_INNER_SIZE || audio_inner_que_.GetSize() >= QUE_AUDIO_INNER_SIZE)
+		//{
+		//	continue;
+		//}
 
 		//end seek operation
 		if (!format->read())

@@ -107,8 +107,8 @@ private:
 	atomic_int sample_rate_;
 	atomic_int channel_;
 	atomic_bool is_seek_;
-	atomic_long audio_seek_convert_dur_;
-	atomic_long video_seek_convert_dur_;
+	std::atomic<long long>audio_seek_convert_dur_;
+	std::atomic<long long> video_seek_convert_dur_;
 
 	ThreadSafe_Queue<AudioPackageInfo> audio_que_;
 	ThreadSafe_Queue<VideoPackageInfo> video_que_;
@@ -127,6 +127,8 @@ private:
 	std::weak_ptr<AVFrameManger> audio_frame_;
 	std::weak_ptr<AVFrameManger> video_frame_;
 
+	std::mutex audio_seek_mutex_;
+	std::mutex video_seek_mutex_;
 
 	std::mutex audio_cnd_lock_;
 	std::mutex video_cnd_lock_;

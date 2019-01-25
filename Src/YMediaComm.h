@@ -51,9 +51,9 @@ enum DecodeError
 struct VideoPackageInfo
 {
 	void *data = nullptr;
-	int width;
-	int height;
-	double pts;
+	int width=0;
+	int height=0;
+	double pts=0.0f;
 	DecodeError error = ERROR_NO_ERROR;
 };
 
@@ -62,7 +62,7 @@ struct AudioPackageInfo
 {
 	void *data = nullptr;
 	int size = 0;
-	double pts;
+	double pts=0.0f;
 	DecodeError error = ERROR_NO_ERROR;
 };
 
