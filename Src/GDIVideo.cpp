@@ -1,5 +1,5 @@
 ﻿#include "GDIVideo.h"
-
+#if PLATFORM_IS_WIN32
 
 
 GDIVideo::GDIVideo()
@@ -98,3 +98,4 @@ void GDIVideo::ShowRGBToWnd(HWND hWnd, BYTE* data, int width, int height)
 	);
 	ReleaseDC(hWnd, hDC);
 }
+#endif

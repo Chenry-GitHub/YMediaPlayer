@@ -1,4 +1,7 @@
 #pragma once
+#include "BasePlatform.h"
+#if PLATFORM_IS_WIN32
+
 #include "BaseVideo.h"
 #include <windows.h>
 
@@ -23,3 +26,4 @@ protected:
 	HWND handle_;
 };
 
+#endif //PLATFORM_IS_WIN32

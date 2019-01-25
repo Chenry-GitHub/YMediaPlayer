@@ -7,8 +7,10 @@
 
 #include "OpenALAudio.h"
 #include "OpenGLVideo.h"
+#if PLATFORM_IS_WIN32
 #include "GDIVideo.h"
 #include "WavAudio.h"
+#endif
 
 
 YMediaPlayer::YMediaPlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
@@ -23,12 +25,14 @@ YMediaPlayer::YMediaPlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 			audio_ = new OpenALAudio();
 			break;
 		}
+#if PLATFORM_IS_WIN32
 		case MODE_WIN_WAV:
 		{
 			audio_ = new WavAudio();
 
 			break;
 		}
+#endif
 	}
 	audio_->SetDataFunction(std::bind(&YMediaPlayer::OnAudioDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	audio_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnAudioSeekFunction, this));
@@ -38,9 +42,13 @@ YMediaPlayer::YMediaPlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 	//this is for video mode
 	switch (video_mode)
 	{
+#if PLATFORM_IS_WIN32
 	case MODE_WIN_GDI:
+	{
 		video_ = new GDIVideo();
 		break;
+	}
+#endif
 	case MODE_OPENGL:
 		video_ = new OpenGLVideo();
 		break;

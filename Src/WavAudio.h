@@ -1,7 +1,8 @@
 #pragma once
+#include "BasePlatform.h"
+#if PLATFORM_IS_WIN32
 
 #include "BaseAudio.h"
-
 #include <windows.h>
 #include <atomic>
 #include <map>
@@ -48,6 +49,4 @@ private:
 
 	std::atomic_bool is_seek_;
 };
-
-
-
+#endif

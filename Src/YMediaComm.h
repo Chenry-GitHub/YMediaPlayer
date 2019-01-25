@@ -1,14 +1,20 @@
 #pragma once
+#include "BasePlatform.h"
 
 enum VideoPlayMode
 {
+#if PLATFORM_IS_WIN32
 	MODE_WIN_GDI,
+#endif
 	MODE_OPENGL,
+
 };
 
 enum AudioPlayMode
 {
+#if PLATFORM_IS_WIN32
 	MODE_WIN_WAV,
+#endif
 	MODE_OPENAL,
 };
 

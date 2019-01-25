@@ -1,4 +1,6 @@
 #include "WavAudio.h"
+#if PLATFORM_IS_WIN32
+
 #include <windows.h>
 #include <mmsystem.h>
 #include <stdio.h>
@@ -234,3 +236,4 @@ void CALLBACK WavAudio::waveOutProc(
 	(*freeBlockCounter)++;
 
 }
+#endif

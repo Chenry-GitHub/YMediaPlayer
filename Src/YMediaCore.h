@@ -27,7 +27,7 @@ class BaseVideo;
 class YMEDIA_DECL YMediaPlayer
 {
 public:
-	YMediaPlayer(AudioPlayMode audio_mode= MODE_OPENAL,VideoPlayMode video_mode=MODE_WIN_GDI);
+	YMediaPlayer(AudioPlayMode audio_mode,VideoPlayMode video_mode);
 	~YMediaPlayer();
 	
 	bool SetMediaFromFile(const char* path_file);
