@@ -32,6 +32,8 @@ YMediaPlayer::YMediaPlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 	}
 	audio_->SetDataFunction(std::bind(&YMediaPlayer::OnAudioDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	audio_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnAudioSeekFunction, this));
+	audio_->SetFreeDataFunction(std::bind(&YMediaPlayer::OnAudioDataFree,this, std::placeholders::_1));
+
 
 	//this is for video mode
 	switch (video_mode)
@@ -137,6 +139,18 @@ void YMediaPlayer::SetCurrentChangedFucnton(CurFunc func)
 	audio_->SetProgressFunction(func);
 }
 
+void YMediaPlayer::OnAudioDataFree(char *data)
+{
+	if (data)
+	{
+		AudioPackageInfo info;
+		info.data = data;
+		info.error = ERROR_NO_ERROR;
+		decoder_->FreeAudioPackageInfo(&info);
+	}
+	
+}
+
 bool YMediaPlayer::OnSynchronizeVideo()
 {
 	while (!audio_->IsStop())
@@ -153,15 +167,6 @@ bool YMediaPlayer::OnSynchronizeVideo()
 
 void YMediaPlayer::OnDecodeError(DecodeError error)
 {
-	//while(audio_thread_runing_)
-	//{
-	//	decoder_.ConductAudioBlocking();
-	//}
-
-	//while(video_thread_runing_)
-	//{
-	//	decoder_.ConductVideoBlocking();
-	//}
 	printf("OnDecodeError  finished %d\n", error);
 }
 
@@ -184,7 +189,6 @@ bool YMediaPlayer::OnAudioDataFunction(char ** data, int *len, double *pts)
 		*data = (char*)info.data;
 		*len = info.size;
 		*pts = info.pts;
-		decoder_->FreeAudioPackageInfo(&info);
 		return true;
 	}
 	

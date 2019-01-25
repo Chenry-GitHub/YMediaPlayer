@@ -129,6 +129,9 @@ void WavAudio::PlayThread()
 		waveCurrentBlock_ %= BLOCK_COUNT;
 		current = &waveBlocks_[waveCurrentBlock_];
 		current->dwUser = 0;
+
+		//free audio data
+		free_func_(data);
 	}
 	WaitForPlayDone();
 

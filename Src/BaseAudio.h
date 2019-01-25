@@ -49,6 +49,11 @@ public:
 		cur_func_ = func;
 	}
 
+	inline void SetFreeDataFunction(std::function<void(char*)> func)
+	{
+		free_func_ = func;
+	}
+
 protected:
 
 
@@ -62,5 +67,6 @@ protected:
 
 	std::function<bool ()> seek_func_;
 
+	std::function<void(char*)> free_func_;
 };
 

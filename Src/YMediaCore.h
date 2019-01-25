@@ -49,6 +49,7 @@ public:
 	void SetCurrentChangedFucnton(CurFunc func);
 
 protected:
+	void OnAudioDataFree(char *data);
 
 	bool OnSynchronizeVideo();
 

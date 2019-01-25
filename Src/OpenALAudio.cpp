@@ -186,5 +186,7 @@ bool OpenALAudio::FillAudioBuff(ALuint& buf)
 		alBufferData(buf, AL_FORMAT_STEREO16, data, len, AUDIO_OUT_SAMPLE_RATE);
 		alSourceQueueBuffers(source_id_, 1, &buf);
 		que_map_[buf] = clock;
+
+		free_func_(data);
 		return true;
 }
