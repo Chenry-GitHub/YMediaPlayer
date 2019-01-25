@@ -39,6 +39,9 @@
     <ClCompile Include="DerSlider.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AboutUs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="TEST.h">
@@ -47,9 +50,15 @@
     <QtMoc Include="DerSlider.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="AboutUs.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="TEST.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="AboutUs.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>

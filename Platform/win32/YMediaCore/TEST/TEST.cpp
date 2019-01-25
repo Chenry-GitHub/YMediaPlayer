@@ -1,11 +1,13 @@
 #include "TEST.h"
 #include "DerSlider.h"
+#include "AboutUs.h"
 
 #include "YMediaCore.h"
 
 #include <QTime>
 #include <QDebug>
 #include <QFileDialog>
+
 
 TEST *g_global_;
 
@@ -14,6 +16,8 @@ TEST::TEST(QWidget *parent)
 {
 	ui.setupUi(this);
 	g_global_ = this;
+	ui.le_media_url->setPlaceholderText("Please Input URL Here~");
+
 
 	QObject::connect(this, &TEST::sig_Dur, this, [&](int dur) {
 		QTime tim(dur / 3600, dur / 60, dur % 60, 0);
@@ -44,12 +48,15 @@ TEST::TEST(QWidget *parent)
 			player_->Play();
 	});
 
+	QObject::connect(ui.btn_support, &QPushButton::clicked, this, [&] {
+		AboutUs us(this);
+		us.exec();
+	});
+
+
 	QObject::connect(ui.btn_open, &QPushButton::clicked, this, [&] {
 
-		QString fileName = QFileDialog::getOpenFileName(nullptr,
-			u8"Please Choice a media file£¡",
-			nullptr,
-			"*.*");
+		QString &&fileName = ui.le_media_url->text();
 		if (fileName.isEmpty())
 			return;
 		player_->SetMediaFromFile(fileName.toStdString().c_str());

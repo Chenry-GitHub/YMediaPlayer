@@ -68,6 +68,29 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
+       <widget class="QLineEdit" name="le_media_url">
+        <property name="inputMask">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string notr="true"/>
+        </property>
+        <property name="maxLength">
+         <number>32767</number>
+        </property>
+        <property name="cursorPosition">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_open">
+        <property name="text">
+         <string>setmedia</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="btn_play">
         <property name="text">
          <string>play/pause</string>
@@ -75,9 +98,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btn_open">
+       <widget class="QPushButton" name="btn_support">
         <property name="text">
-         <string>OpenFile</string>
+         <string>支持说明</string>
         </property>
        </widget>
       </item>
