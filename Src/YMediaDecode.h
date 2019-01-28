@@ -197,7 +197,6 @@ public:
 	bool open_input_;
 	AVFormatContext* ctx_;
 	AVPacket *pkg_;
-	MemReadStruct readst_;
 };
 
 class CodecCtx {
