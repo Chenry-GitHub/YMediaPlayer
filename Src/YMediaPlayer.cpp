@@ -12,3 +12,5 @@ void DeletePlayer(YMediaPlayer*player)
 	if(player)
 		delete player;
 }
+
+

@@ -126,9 +126,6 @@
     <QtUic Include="TEST.ui" />
   </ItemGroup>
   <ItemGroup>
-    <QtRcc Include="TEST.qrc" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\YMediaCore.vcxproj">
       <Project>{40b3c61e-f5f6-47f9-9d13-7261e6bddd82}</Project>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>

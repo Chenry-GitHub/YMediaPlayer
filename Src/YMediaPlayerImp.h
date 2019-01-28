@@ -10,7 +10,7 @@
 
 
 #include "YMediaPlayer.h"
-
+#include <fstream>
 
 
 
@@ -21,7 +21,7 @@ class YMediaPlayerImp:public YMediaPlayer
 {
 public:
 	YMediaPlayerImp(AudioPlayMode audio_mode,VideoPlayMode video_mode);
-	~YMediaPlayerImp();
+	virtual ~YMediaPlayerImp();
 	
 	bool SetMediaFromFile(const char* path_file);
 	
@@ -66,7 +66,7 @@ private:
 
 	MediaInfo media_info_;
 	YMediaDecode  *decoder_;
-
+	std::ifstream read_fs_;
 	
 	//this is for synchronization
 	StatusFunc status_func_;

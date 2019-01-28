@@ -477,13 +477,17 @@ void YMediaDecode::FlushAudioDecodec()
 
 int YMediaDecode::ReadBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
 {
-	MemReadStruct *readst = (MemReadStruct*)opaque;
-	int result = readst->target->read_func_((char*)read_buf, read_buf_size);
-	if(result>0)
+	std::shared_ptr<MemReadStruct>* readst = (std::shared_ptr<MemReadStruct>*)opaque;
+	if (readst  && *readst)
 	{
-		return result;
+		int result = (*readst)->target->read_func_((char*)read_buf, read_buf_size);
+		if (result > 0)
+		{
+			return result;
+		}
+		return -1;
 	}
-	return 0;
+	return -1;
 }
 
 void YMediaDecode::NotifyDecodeStatus(DecodeError error)

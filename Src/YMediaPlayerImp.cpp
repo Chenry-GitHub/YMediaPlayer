@@ -79,6 +79,8 @@ bool YMediaPlayerImp::SetMediaFromFile(const char* path_file)
 
 	path_file_ = path_file;
 
+	read_fs_.open(path_file_,std::ios::in|std::ios::binary);
+	
 	decoder_->SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
 
@@ -163,7 +165,7 @@ void YMediaPlayerImp::OnAudioDataFree(char *data)
 
 bool YMediaPlayerImp::OnSynchronizeVideo()
 {
-	while (!audio_->IsStop())
+	while (!audio_->IsStop()|| !video_->IsStop())
 	{
 		//printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
 		if (video_->GetClock()<= audio_->GetClock())
@@ -231,8 +233,16 @@ bool YMediaPlayerImp::OnVideoSeekFunction()
 
 int YMediaPlayerImp::OnReadMem(char*data, int len)
 {
-	
-	return len;
+	if (read_fs_)//file exist
+	{
+		read_fs_.read(data, len);
+		return (int)read_fs_.gcount();;
+	}
+	else
+	{
+
+		return -1;
+	}
 }
 
 void YMediaPlayerImp::NotifyPlayerStatus(PlayerStatus st)

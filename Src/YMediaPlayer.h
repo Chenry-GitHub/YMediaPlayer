@@ -12,8 +12,7 @@ using StatusFunc = void(*)(PlayerStatus);
 class YMEDIA_DECL YMediaPlayer
 {
 public:
-	//YMediaImplement(AudioPlayMode audio_mode, VideoPlayMode video_mode)=0;
-	//~YMediaImplement();
+	virtual ~YMediaPlayer() {}
 
 	virtual bool SetMediaFromFile(const char* path_file) =0;
 

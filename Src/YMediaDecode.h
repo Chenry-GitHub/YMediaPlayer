@@ -163,8 +163,8 @@ class FormatCtx {
 public:
 	inline FormatCtx(ReadFunc func, MemReadStruct read)
 		: open_input_(false)
-		, readst_(read)
 	{
+		readst_ = std::make_shared<MemReadStruct>(read);
 #define  READ_BUFFER_SIZE 32768 //32KB
 		buffer_ = (unsigned char*)av_malloc(READ_BUFFER_SIZE);
 		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &readst_, func, NULL, NULL);
@@ -188,7 +188,7 @@ public:
 		ctx_->pb = ioctx_;
 		ctx_->flags = AVFMT_FLAG_CUSTOM_IO;
 
-		if (avformat_open_input(&ctx_, "", 0, 0) != 0)
+		if (avformat_open_input(&ctx_, NULL, 0, 0) < 0)
 		{
 			return false;
 		}
@@ -220,7 +220,7 @@ public:
 	AVIOContext *ioctx_;
 	AVFormatContext* ctx_;
 	AVPacket *pkg_;
-	MemReadStruct readst_;
+	shared_ptr<MemReadStruct> readst_;
 };
 
 class CodecCtx {
