@@ -205,7 +205,7 @@ void YMediaDecode::DecodeThread()
 	is_manual_stop_ = false;
 	uint8_t* pic_buff=nullptr;
 
-	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(ReadBuff, MemReadStruct{this});
+	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>();
 	format_ctx_ = format;
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
@@ -473,17 +473,6 @@ void YMediaDecode::FlushAudioDecodec()
 		info_audio.flag = FLAG_FLUSH_DECODEC;
 		DoConvertAudio(info_audio.pkg);
 	}
-}
-
-int YMediaDecode::ReadBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
-{
-	MemReadStruct *readst = (MemReadStruct*)opaque;
-	int result = readst->target->read_func_((char*)read_buf, read_buf_size);
-	if(result>0)
-	{
-		return result;
-	}
-	return 0;
 }
 
 void YMediaDecode::NotifyDecodeStatus(DecodeError error)

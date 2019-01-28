@@ -68,11 +68,6 @@ public:
 		media_func_ = func;
 	}
 
-	/*Play的Read回调方法*/
-	void SetReadMemFunction(std::function<int (char *data, int len)> func)
-	{
-		read_func_ = func;
-	}
 
 	/*Play层调用，释放播放后的包体*/
 	void FreeAudioPackageInfo(AudioPackageInfo*);
@@ -107,8 +102,6 @@ protected:
 	/*退出解码线程需要调用的*/
 	void FlushVideoDecodec();
 	void FlushAudioDecodec();
-
-	static int ReadBuff(void *opaque, uint8_t *buf, int buf_size);
 private:
 
 	void NotifyDecodeStatus(DecodeError);
@@ -151,24 +144,13 @@ private:
 	
 	std::function<void (DecodeError)> error_func_;
 	std::function<void(MediaInfo)> media_func_;
-	std::function<int (char *data, int len)> read_func_;
 };
-
-struct MemReadStruct {
-	YMediaDecode *target;
-};
-using ReadFunc = int (*) (void *opaque, uint8_t *buf, int buf_size);
 
 class FormatCtx {
 public:
-	inline FormatCtx(ReadFunc func, MemReadStruct read)
+	inline FormatCtx()
 		: open_input_(false)
-		, readst_(read)
 	{
-#define  READ_BUFFER_SIZE 32768 //32KB
-		buffer_ = (unsigned char*)av_malloc(READ_BUFFER_SIZE);
-		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &readst_, func, NULL, NULL);
-
 		ctx_= avformat_alloc_context();
 		pkg_ = av_packet_alloc();
 		av_init_packet(pkg_);
@@ -185,10 +167,7 @@ public:
 
 	bool InitFormatCtx(const char* filename)
 	{
-		ctx_->pb = ioctx_;
-		ctx_->flags = AVFMT_FLAG_CUSTOM_IO;
-
-		if (avformat_open_input(&ctx_, "", 0, 0) != 0)
+		if (avformat_open_input(&ctx_, filename, 0, 0) != 0)
 		{
 			return false;
 		}
@@ -216,8 +195,6 @@ public:
 	}
 
 	bool open_input_;
-	unsigned char *buffer_;
-	AVIOContext *ioctx_;
 	AVFormatContext* ctx_;
 	AVPacket *pkg_;
 	MemReadStruct readst_;

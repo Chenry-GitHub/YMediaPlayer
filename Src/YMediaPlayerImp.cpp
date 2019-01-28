@@ -61,8 +61,7 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	decoder_ = new YMediaDecode();
 	decoder_->SetErrorFunction(std::bind(&YMediaPlayerImp::OnDecodeError,this, std::placeholders::_1));
 	decoder_->SetMediaFunction(std::bind(&YMediaPlayerImp::OnMediaInfo, this, std::placeholders::_1));
-	decoder_->SetReadMemFunction(std::bind(&YMediaPlayerImp::OnReadMem, this, std::placeholders::_1, std::placeholders::_2));
-	
+
 }
 
 YMediaPlayerImp::~YMediaPlayerImp()
