@@ -1,4 +1,4 @@
-﻿#include "YMediaCore.h"
+﻿#include "YMediaPlayerImp.h"
 
 
 #include "BaseAudio.h"
@@ -13,7 +13,7 @@
 #endif
 
 
-YMediaPlayer::YMediaPlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
+YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 	:status_func_(nullptr)
 {
 	//this is for initialize audio
@@ -34,9 +34,9 @@ YMediaPlayer::YMediaPlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 		}
 #endif
 	}
-	audio_->SetDataFunction(std::bind(&YMediaPlayer::OnAudioDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	audio_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnAudioSeekFunction, this));
-	audio_->SetFreeDataFunction(std::bind(&YMediaPlayer::OnAudioDataFree,this, std::placeholders::_1));
+	audio_->SetDataFunction(std::bind(&YMediaPlayerImp::OnAudioDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	audio_->SetBlockSeekFunction(std::bind(&YMediaPlayerImp::OnAudioSeekFunction, this));
+	audio_->SetFreeDataFunction(std::bind(&YMediaPlayerImp::OnAudioDataFree,this, std::placeholders::_1));
 
 
 	//this is for video mode
@@ -53,24 +53,26 @@ YMediaPlayer::YMediaPlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 		video_ = new OpenGLVideo();
 		break;
 	}
-	video_->SetDataFunction(std::bind(&YMediaPlayer::OnVideoDataFunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-	video_->SetSyncToAudioFunction(std::bind(&YMediaPlayer::OnSynchronizeVideo, this));
-	video_->SetBlockSeekFunction(std::bind(&YMediaPlayer::OnVideoSeekFunction, this));
+	video_->SetDataFunction(std::bind(&YMediaPlayerImp::OnVideoDataFunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+	video_->SetSyncToAudioFunction(std::bind(&YMediaPlayerImp::OnSynchronizeVideo, this));
+	video_->SetBlockSeekFunction(std::bind(&YMediaPlayerImp::OnVideoSeekFunction, this));
 
 
 	decoder_ = new YMediaDecode();
-	decoder_->SetErrorFunction(std::bind(&YMediaPlayer::OnDecodeError,this, std::placeholders::_1));
-	decoder_->SetMediaFunction(std::bind(&YMediaPlayer::OnMediaInfo, this, std::placeholders::_1));
+	decoder_->SetErrorFunction(std::bind(&YMediaPlayerImp::OnDecodeError,this, std::placeholders::_1));
+	decoder_->SetMediaFunction(std::bind(&YMediaPlayerImp::OnMediaInfo, this, std::placeholders::_1));
+	decoder_->SetReadMemFunction(std::bind(&YMediaPlayerImp::OnReadMem, this, std::placeholders::_1, std::placeholders::_2));
+	
 }
 
-YMediaPlayer::~YMediaPlayer()
+YMediaPlayerImp::~YMediaPlayerImp()
 {
 	Stop();
 
 }
 
 
-bool YMediaPlayer::SetMediaFromFile(const char* path_file)
+bool YMediaPlayerImp::SetMediaFromFile(const char* path_file)
 {
 	Stop();
 	printf("Stop\n");
@@ -89,26 +91,26 @@ bool YMediaPlayer::SetMediaFromFile(const char* path_file)
 	return true;
 }
 
-bool YMediaPlayer::Play()
+bool YMediaPlayerImp::Play()
 {
 	audio_->Play();
 	video_->Play();
 	return true;
 }
 
-bool YMediaPlayer::Pause()
+bool YMediaPlayerImp::Pause()
 {
 	audio_->Pause();
 	video_->Pause();
 	return true;
 }
 
-bool YMediaPlayer::IsPlaying()
+bool YMediaPlayerImp::IsPlaying()
 {
 	return audio_->IsPlaying();
 }
 
-bool YMediaPlayer::Stop()
+bool YMediaPlayerImp::Stop()
 {
 	decoder_->ConductAudioBlocking();
 	audio_->Stop();
@@ -124,30 +126,30 @@ bool YMediaPlayer::Stop()
 
 
 
-void YMediaPlayer::Seek(float pos)
+void YMediaPlayerImp::Seek(float pos)
 {
 	decoder_->SeekPos(media_info_.dur*pos);
 	audio_->Seek(pos);
 	video_->Seek(pos);
 }
 
-void YMediaPlayer::SetDisplayWindow(void* handle)
+void YMediaPlayerImp::SetDisplayWindow(void* handle)
 {
 	video_->SetDisplay(handle);
 }
 
-void YMediaPlayer::SetDurationChangedFunction(DurFunc func)
+void YMediaPlayerImp::SetDurationChangedFunction(DurFunc func)
 {
 	dur_func_ = func;
 }
 
-void YMediaPlayer::SetCurrentChangedFucnton(CurFunc func)
+void YMediaPlayerImp::SetCurrentChangedFucnton(CurFunc func)
 {
 	cur_func_ = func;
 	audio_->SetProgressFunction(func);
 }
 
-void YMediaPlayer::OnAudioDataFree(char *data)
+void YMediaPlayerImp::OnAudioDataFree(char *data)
 {
 	if (data)
 	{
@@ -159,7 +161,7 @@ void YMediaPlayer::OnAudioDataFree(char *data)
 	
 }
 
-bool YMediaPlayer::OnSynchronizeVideo()
+bool YMediaPlayerImp::OnSynchronizeVideo()
 {
 	while (!audio_->IsStop())
 	{
@@ -173,12 +175,12 @@ bool YMediaPlayer::OnSynchronizeVideo()
 	return false;
 }
 
-void YMediaPlayer::OnDecodeError(DecodeError error)
+void YMediaPlayerImp::OnDecodeError(DecodeError error)
 {
 	printf("OnDecodeError  finished %d\n", error);
 }
 
-void YMediaPlayer::OnMediaInfo(MediaInfo info)
+void YMediaPlayerImp::OnMediaInfo(MediaInfo info)
 {
 	media_info_ = info;
 	audio_->SetDuration(info.dur);
@@ -189,7 +191,7 @@ void YMediaPlayer::OnMediaInfo(MediaInfo info)
 	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
 }
 
-bool YMediaPlayer::OnAudioDataFunction(char ** data, int *len, double *pts)
+bool YMediaPlayerImp::OnAudioDataFunction(char ** data, int *len, double *pts)
 {
 	AudioPackageInfo &&info = decoder_->PopAudioQue();
 	if (info.error == ERROR_NO_ERROR)
@@ -203,7 +205,7 @@ bool YMediaPlayer::OnAudioDataFunction(char ** data, int *len, double *pts)
 	return false;
 }
 
-bool YMediaPlayer::OnVideoDataFunction(char ** data, int *width, int *height, double *pts)
+bool YMediaPlayerImp::OnVideoDataFunction(char ** data, int *width, int *height, double *pts)
 {
 	VideoPackageInfo  && pkg = decoder_->PopVideoQue(video_->GetClock());
 	if (pkg.error == ERROR_NO_ERROR)
@@ -217,17 +219,23 @@ bool YMediaPlayer::OnVideoDataFunction(char ** data, int *width, int *height, do
 	return false;
 }
 
-bool YMediaPlayer::OnAudioSeekFunction()
+bool YMediaPlayerImp::OnAudioSeekFunction()
 {
 	return decoder_->JudgeBlockAudioSeek();
 }
 
-bool YMediaPlayer::OnVideoSeekFunction()
+bool YMediaPlayerImp::OnVideoSeekFunction()
 {
 	return decoder_->JudgeBlockVideoSeek();
 }
 
-void YMediaPlayer::NotifyPlayerStatus(PlayerStatus st)
+int YMediaPlayerImp::OnReadMem(char*data, int len)
+{
+	
+	return len;
+}
+
+void YMediaPlayerImp::NotifyPlayerStatus(PlayerStatus st)
 {
 	if (status_func_)
 		status_func_(st);

@@ -2,7 +2,7 @@
 #include "DerSlider.h"
 #include "AboutUs.h"
 
-#include "YMediaCore.h"
+#include "YMediaPlayer.h"
 
 #include <QTime>
 #include <QDebug>
@@ -63,7 +63,7 @@ TEST::TEST(QWidget *parent)
 		player_->Play();
 	});
 
-	player_ = new YMediaPlayer(MODE_WIN_WAV, MODE_WIN_GDI);
+	player_ = CreatePlayer(MODE_WIN_WAV, MODE_WIN_GDI);
 	player_->SetDisplayWindow((void*)ui.lab_video->winId());
 
 	player_->SetDurationChangedFunction([](int dur) {
@@ -76,5 +76,5 @@ TEST::TEST(QWidget *parent)
 
 TEST::~TEST()
 {
-	delete player_;
+	DeletePlayer(player_);
 }

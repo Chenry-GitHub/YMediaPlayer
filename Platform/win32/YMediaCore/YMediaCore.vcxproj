@@ -156,8 +156,9 @@
     <ClCompile Include="..\..\..\Src\OpenALAudio.cpp" />
     <ClCompile Include="..\..\..\Src\OpenGLVideo.cpp" />
     <ClCompile Include="..\..\..\Src\WavAudio.cpp" />
-    <ClCompile Include="..\..\..\Src\YMediaCore.cpp" />
+    <ClCompile Include="..\..\..\Src\YMediaPlayerImp.cpp" />
     <ClCompile Include="..\..\..\Src\YMediaDecode.cpp" />
+    <ClCompile Include="..\..\..\Src\YMediaPlayer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Src\BaseAudio.h" />
@@ -170,8 +171,9 @@
     <ClInclude Include="..\..\..\Src\ThreadSafe_Queue.h" />
     <ClInclude Include="..\..\..\Src\WavAudio.h" />
     <ClInclude Include="..\..\..\Src\YMediaComm.h" />
-    <ClInclude Include="..\..\..\Src\YMediaCore.h" />
+    <ClInclude Include="..\..\..\Src\YMediaPlayerImp.h" />
     <ClInclude Include="..\..\..\Src\YMediaDecode.h" />
+    <ClInclude Include="..\..\..\Src\YMediaPlayer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
