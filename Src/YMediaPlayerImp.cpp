@@ -16,6 +16,7 @@
 YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 	:status_func_(nullptr)
 	, opaque_(nullptr)
+	, user_video_func_(nullptr)
 {
 	//this is for initialize audio
 	switch (audio_mode)
@@ -57,7 +58,7 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	video_->SetDataFunction(std::bind(&YMediaPlayerImp::OnVideoDataFunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 	video_->SetSyncToAudioFunction(std::bind(&YMediaPlayerImp::OnSynchronizeVideo, this));
 	video_->SetBlockSeekFunction(std::bind(&YMediaPlayerImp::OnVideoSeekFunction, this));
-
+	video_->SetUserDisplayFunction(std::bind(&YMediaPlayerImp::OnUserDisplayFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
 	decoder_ = new YMediaDecode();
 	decoder_->SetErrorFunction(std::bind(&YMediaPlayerImp::OnDecodeError,this, std::placeholders::_1));
@@ -156,6 +157,11 @@ void YMediaPlayerImp::SetOpaque(void*opa)
 	opaque_ = opa;
 }
 
+void YMediaPlayerImp::SetUserHandleVideoFunction(VideoFunc func)
+{
+	user_video_func_ = func;
+}
+
 void YMediaPlayerImp::OnAudioDataFree(char *data)
 {
 	if (data)
@@ -234,6 +240,17 @@ bool YMediaPlayerImp::OnAudioSeekFunction()
 bool YMediaPlayerImp::OnVideoSeekFunction()
 {
 	return decoder_->JudgeBlockVideoSeek();
+}
+
+bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
+{
+	//decoder_->user_video_func_;
+	if (user_video_func_)
+	{
+		user_video_func_(opaque_, data, width, height);
+		return true;
+	}
+	return false;
 }
 
 int YMediaPlayerImp::OnReadMem(char*data, int len)

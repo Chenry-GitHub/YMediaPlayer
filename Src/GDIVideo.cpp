@@ -44,7 +44,10 @@ void GDIVideo::PlayThread()
 		
 		if (sync_func_())
 		{
-			ShowRGBToWnd(handle_, (BYTE*)data, width, height);
+			if (!user_display_func_(data, width, height))
+			{
+				ShowRGBToWnd(handle_, (BYTE*)data, width, height);
+			}
 		}
 	}
 }

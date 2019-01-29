@@ -43,6 +43,8 @@ public:
 
 	virtual void SetOpaque(void*) override;
 
+	virtual void SetUserHandleVideoFunction(VideoFunc func) override;
+
 protected:
 	void OnAudioDataFree(char *data);
 
@@ -60,6 +62,8 @@ protected:
 
 	bool OnVideoSeekFunction();
 
+	bool OnUserDisplayFunction(void *data,int width,int height);
+
 	int OnReadMem(char*data,int len);
 private:
 	void NotifyPlayerStatus(PlayerStatus);
@@ -75,10 +79,12 @@ private:
 
 	DurFunc dur_func_;
 	CurFunc cur_func_;
-
+	VideoFunc user_video_func_;
 
 	BaseAudio * audio_;
 	BaseVideo * video_;
 
 	void *opaque_;
+
+
 };

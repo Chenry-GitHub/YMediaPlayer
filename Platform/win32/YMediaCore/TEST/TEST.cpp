@@ -7,6 +7,7 @@
 #include <QTime>
 #include <QDebug>
 #include <QFileDialog>
+#include <QPainter>
 
 
 
@@ -16,7 +17,13 @@ TEST::TEST(QWidget *parent)
 	ui.setupUi(this);
 	ui.le_media_url->setPlaceholderText("Please Input URL Here~");
 
-
+	QObject::connect(this, &TEST::sig_Update, this, [&](void *data, int w, int h) {
+		if (w <= 0 || h <= 0)
+			return;
+		img_ = QImage((uchar*)data, w, h, QImage::Format_RGB32).copy();
+		update(rect());
+	}, Qt::QueuedConnection);
+	
 	QObject::connect(this, &TEST::sig_Dur, this, [&](int dur) {
 		QTime tim(dur / 3600, dur / 60, dur % 60, 0);
 		QString str = tim.toString("hh:mm:ss");
@@ -52,6 +59,7 @@ TEST::TEST(QWidget *parent)
 	});
 
 
+
 	QObject::connect(ui.btn_open, &QPushButton::clicked, this, [&] {
 
 		QString &&fileName = ui.le_media_url->text();
@@ -72,9 +80,21 @@ TEST::TEST(QWidget *parent)
 		TEST *widget = (TEST*)opa;
 		emit widget->sig_Pos(cur);
 	}); 
+	
+	player_->SetUserHandleVideoFunction([](void *opa, void*data, int width, int height) {
+		TEST *widget = (TEST*)opa;
+		emit widget->sig_Update(data, width, height);
+	});
+
 }
 
 TEST::~TEST()
 {
 	DeletePlayer(player_);
+}
+
+void TEST::paintEvent(QPaintEvent *event)
+{
+	QPainter p(this);
+	p.drawImage(0, 0, img_);
 }
