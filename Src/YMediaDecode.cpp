@@ -303,16 +303,16 @@ void YMediaDecode::DecodeThread()
 		{
 			if (audio_seek_convert_dur_!= SEEK_TIME_DEFAULT)
 			{
-				double abs_value = abs(format->pkg_->pts - audio_seek_convert_dur_);
-				if (abs_value <= AV_TIME_BASE* 5)//5秒
-				{
+				//double abs_value = abs(format->pkg_->pts - audio_seek_convert_dur_);
+				//if (abs_value <= AV_TIME_BASE* 5)//5秒
+				//{
 					audio_seek_convert_dur_ = SEEK_TIME_DEFAULT;
 					audio_cnd_.notify_all();
 					
 					InnerPacketInfo info;
 					info.pkg = av_packet_clone(format->pkg_);
 					audio_inner_que_.push(info);
-				}
+				//}
 			}
 			else
 			{
@@ -325,9 +325,9 @@ void YMediaDecode::DecodeThread()
 		{
 			if (video_seek_convert_dur_ != SEEK_TIME_DEFAULT)
 			{
-				double abs_value = abs(format->pkg_->pts - video_seek_convert_dur_);
-				if (abs_value <= AV_TIME_BASE * 5)
-				{
+				//double abs_value = abs(format->pkg_->pts - video_seek_convert_dur_);
+				//if (abs_value <= AV_TIME_BASE * 5)
+				//{
 					if (format->pkg_->flags&AV_PKT_FLAG_KEY)
 					{
 						video_seek_convert_dur_ = SEEK_TIME_DEFAULT;
@@ -337,7 +337,7 @@ void YMediaDecode::DecodeThread()
 						info.pkg = av_packet_clone(format->pkg_);
 						video_inner_que_.push(info);
 					}
-				}
+				//}
 			}
 			else
 			{

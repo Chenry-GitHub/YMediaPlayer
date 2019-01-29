@@ -8,7 +8,7 @@
 #include <functional>
 using namespace std;
 
-
+#include <time.h>
 
 
 extern "C"
@@ -167,7 +167,15 @@ public:
 
 	bool InitFormatCtx(const char* filename)
 	{
-		if (avformat_open_input(&ctx_, filename, 0, 0) != 0)
+		ctx_->interrupt_callback.callback = BlockCallback;//超时回调
+		ctx_->interrupt_callback.opaque = this;
+		AVDictionary* opts = NULL;
+		av_dict_set(&opts, "rtsp_transport", "tcp", 0); //设置tcp or udp，默认一般优先tcp再尝试udp
+		av_dict_set(&opts, "rtsp_transport", "udp", 0);
+		av_dict_set(&opts, "stimeout", "3000000", 0);//设置超时3秒,rtsp
+		av_dict_set(&opts, "timeout", "3000000", 0);//设置超时3秒,udp,http
+		last_time_ = time(NULL);
+		if (avformat_open_input(&ctx_, filename, 0, &opts) != 0)
 		{
 			return false;
 		}
@@ -178,9 +186,10 @@ public:
 		}
 		return true;
 	}
-
+	
 
 	inline bool read() {
+		last_time_ = time(NULL);
 		return  av_read_frame(ctx_, pkg_) >= 0;
 	}
 
@@ -197,6 +206,13 @@ public:
 	bool open_input_;
 	AVFormatContext* ctx_;
 	AVPacket *pkg_;
+	int last_time_;
+protected:
+	static int BlockCallback(void*opa)
+	{
+		FormatCtx *ctx = (FormatCtx*)opa;
+		return time(NULL) - ctx->last_time_>=3;
+	}
 };
 
 class CodecCtx {
