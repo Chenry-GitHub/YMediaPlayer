@@ -21,25 +21,27 @@ class YMediaPlayerImp:public YMediaPlayer
 {
 public:
 	YMediaPlayerImp(AudioPlayMode audio_mode,VideoPlayMode video_mode);
-	~YMediaPlayerImp();
+	virtual~YMediaPlayerImp() override;
 	
-	bool SetMediaFromFile(const char* path_file);
+	virtual bool SetMediaFromFile(const char* path_file) override;
 	
-	bool Play();
+	virtual bool Play() override;
 
-	bool Pause();
+	virtual bool Pause() override;
 
-	bool IsPlaying();
+	virtual bool IsPlaying() override;
 
-	bool Stop();
+	virtual bool Stop() override;
 
-	void Seek(float pos);
+	virtual void Seek(float pos) override;
 
-	void SetDisplayWindow(void*);
+	virtual void SetDisplayWindow(void*) override;
 
-	void SetDurationChangedFunction(DurFunc func);
+	virtual void SetDurationChangedFunction(DurFunc func) override;
 
-	void SetCurrentChangedFucnton(CurFunc func);
+	virtual void SetCurrentChangedFucnton(CurFunc func) override;
+
+	virtual void SetOpaque(void*) override;
 
 protected:
 	void OnAudioDataFree(char *data);
@@ -77,4 +79,6 @@ private:
 
 	BaseAudio * audio_;
 	BaseVideo * video_;
+
+	void *opaque_;
 };

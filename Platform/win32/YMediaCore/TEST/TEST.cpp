@@ -9,13 +9,11 @@
 #include <QFileDialog>
 
 
-TEST *g_global_;
 
 TEST::TEST(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
-	g_global_ = this;
 	ui.le_media_url->setPlaceholderText("Please Input URL Here~");
 
 
@@ -63,14 +61,16 @@ TEST::TEST(QWidget *parent)
 		player_->Play();
 	});
 
-	player_ = CreatePlayer(MODE_WIN_WAV, MODE_WIN_GDI);
+	player_ = CreatePlayer(MODE_WIN_WAV, MODE_WIN_GDI,this);
 	player_->SetDisplayWindow((void*)ui.lab_video->winId());
 
-	player_->SetDurationChangedFunction([](int dur) {
-		emit g_global_->sig_Dur(dur);
+	player_->SetDurationChangedFunction([](void*opa,int dur) {
+		TEST *widget = (TEST*)opa;
+		emit widget->sig_Dur(dur);
 	});
-	player_->SetCurrentChangedFucnton([](int cur){
-		emit g_global_->sig_Pos(cur);
+	player_->SetCurrentChangedFucnton([](void*opa,int cur){
+		TEST *widget = (TEST*)opa;
+		emit widget->sig_Pos(cur);
 	}); 
 }
 

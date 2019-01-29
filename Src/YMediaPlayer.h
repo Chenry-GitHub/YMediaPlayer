@@ -5,14 +5,13 @@
 #else
 #define YMEDIA_DECL __declspec(dllimport)
 #endif
-using DurFunc = void(*)(int);
-using CurFunc = void(*)(int);
+using DurFunc = void(*)(void *opaque,int);
+using CurFunc = void(*)(void *opaque,int);
 using StatusFunc = void(*)(PlayerStatus);
 
 class YMEDIA_DECL YMediaPlayer
 {
 public:
-	//YMediaImplement(AudioPlayMode audio_mode, VideoPlayMode video_mode)=0;
 	virtual ~YMediaPlayer() {};
 
 	virtual bool SetMediaFromFile(const char* path_file) =0;
@@ -29,12 +28,14 @@ public:
 
 	virtual void SetDisplayWindow(void*) = 0;
 
+	virtual void SetOpaque(void*)=0;
+
 	virtual void SetDurationChangedFunction(DurFunc func) = 0;
 
 	virtual void SetCurrentChangedFucnton(CurFunc func) = 0;
 
 };
 
-YMEDIA_DECL YMediaPlayer* CreatePlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode);
+YMEDIA_DECL YMediaPlayer* CreatePlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode,void* opaque);
 
 YMEDIA_DECL void DeletePlayer(YMediaPlayer*);

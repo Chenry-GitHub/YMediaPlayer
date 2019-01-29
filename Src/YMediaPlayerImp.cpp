@@ -15,6 +15,7 @@
 
 YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 	:status_func_(nullptr)
+	, opaque_(nullptr)
 {
 	//this is for initialize audio
 	switch (audio_mode)
@@ -145,7 +146,14 @@ void YMediaPlayerImp::SetDurationChangedFunction(DurFunc func)
 void YMediaPlayerImp::SetCurrentChangedFucnton(CurFunc func)
 {
 	cur_func_ = func;
-	audio_->SetProgressFunction(func);
+	audio_->SetProgressFunction([this](int dur) {
+		cur_func_(opaque_,dur);
+	});
+}
+
+void YMediaPlayerImp::SetOpaque(void*opa)
+{
+	opaque_ = opa;
 }
 
 void YMediaPlayerImp::OnAudioDataFree(char *data)
@@ -186,7 +194,7 @@ void YMediaPlayerImp::OnMediaInfo(MediaInfo info)
 	video_->SetDuration(info.dur);
 	
 	if(dur_func_)
-		dur_func_((int)info.dur);
+		dur_func_(opaque_ , (int)info.dur);
 	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
 }
 
