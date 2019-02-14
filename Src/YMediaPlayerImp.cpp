@@ -62,6 +62,7 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	decoder_->SetErrorFunction(std::bind(&YMediaPlayerImp::OnDecodeError,this, std::placeholders::_1));
 	decoder_->SetMediaFunction(std::bind(&YMediaPlayerImp::OnMediaInfo, this, std::placeholders::_1));
 	decoder_->SetReadMemFunction(std::bind(&YMediaPlayerImp::OnReadMem, this, std::placeholders::_1, std::placeholders::_2));
+	decoder_->SetSeekMemFunction(std::bind(&YMediaPlayerImp::OnSeekMem, this, std::placeholders::_1, std::placeholders::_2 , std::placeholders::_3));
 	
 }
 
@@ -78,8 +79,8 @@ bool YMediaPlayerImp::SetMediaFromFile(const char* path_file)
 	printf("Stop\n");
 
 	path_file_ = path_file;
-
-	read_fs_.open(path_file_,std::ios::in|std::ios::binary);
+	read_fs_.close();
+	read_fs_.open(path_file_,std::ios::binary);
 	
 	decoder_->SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
@@ -243,6 +244,49 @@ int YMediaPlayerImp::OnReadMem(char*data, int len)
 
 		return -1;
 	}
+}
+
+int64_t YMediaPlayerImp::OnSeekMem(void *opaque, int64_t offset, int whence)
+{
+	int64_t  newpos = 0;
+	switch (whence)
+	{
+		case SEEK_SET:
+			newpos = offset;
+			break;
+		case SEEK_CUR:
+			newpos = read_fs_.tellg() + offset;
+			break;
+		case SEEK_END: // 此处可能有问题
+		{
+			std::streampos  pos = read_fs_.tellg();
+			read_fs_.seekg(0, ios::end);
+			int64_t totalsize = read_fs_.tellg();
+			read_fs_.seekg(pos);
+			newpos = totalsize+offset;
+			if (offset > 0)
+			{
+				read_fs_.seekg(totalsize);
+				return totalsize;
+			}
+			else
+			{
+				read_fs_.seekg(newpos);
+				return newpos;
+			}
+			break;
+		}
+		case 0x10000://AVSEEK_SIZE
+		{
+			std::streampos  pos = read_fs_.tellg();
+			read_fs_.seekg(0, ios::end);
+			int64_t totalsize = read_fs_.tellg();
+			read_fs_.seekg(pos);
+			return totalsize;
+		}
+	}
+	read_fs_.seekg(newpos);
+	return newpos;
 }
 
 void YMediaPlayerImp::NotifyPlayerStatus(PlayerStatus st)

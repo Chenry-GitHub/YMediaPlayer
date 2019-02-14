@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <algorithm>
 using namespace std;
 
 
@@ -74,6 +75,11 @@ public:
 		read_func_ = func;
 	}
 
+	void SetSeekMemFunction(std::function<int64_t(void *opaque, int64_t offset, int whence)> func)
+	{
+		seek_func_ = func;
+	}
+
 	/*Play层调用，释放播放后的包体*/
 	void FreeAudioPackageInfo(AudioPackageInfo*);
 
@@ -109,6 +115,8 @@ protected:
 	void FlushAudioDecodec();
 
 	static int ReadBuff(void *opaque, uint8_t *buf, int buf_size);
+
+	static  int64_t SeekBuff(void *opaque, int64_t offset, int whence);
 private:
 
 	void NotifyDecodeStatus(DecodeError);
@@ -152,22 +160,25 @@ private:
 	std::function<void (DecodeError)> error_func_;
 	std::function<void(MediaInfo)> media_func_;
 	std::function<int (char *data, int len)> read_func_;
+	std::function<	int64_t(void *opaque, int64_t offset, int whence)> seek_func_;
+
 };
 
 struct MemReadStruct {
 	YMediaDecode *target;
 };
 using ReadFunc = int (*) (void *opaque, uint8_t *buf, int buf_size);
+using SeekFunc = int64_t(*)(void *opaque, int64_t offset, int whence);
 
 class FormatCtx {
 public:
-	inline FormatCtx(ReadFunc func, MemReadStruct read)
+	inline FormatCtx(ReadFunc func, SeekFunc seek_func,MemReadStruct read)
 		: open_input_(false)
 	{
 		readst_ = std::make_shared<MemReadStruct>(read);
 #define  READ_BUFFER_SIZE 32768 //32KB
 		buffer_ = (unsigned char*)av_malloc(READ_BUFFER_SIZE);
-		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &readst_, func, NULL, NULL);
+		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &readst_, func, NULL, seek_func);
 
 		ctx_= avformat_alloc_context();
 		pkg_ = av_packet_alloc();

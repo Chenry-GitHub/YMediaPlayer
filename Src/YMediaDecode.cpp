@@ -1,6 +1,7 @@
 ﻿#include "YMediaDecode.h"
 
 
+
 #define  SEEK_TIME_DEFAULT -1.0
 #define  QUE_AUDIO_INNER_SIZE 400
 #define  QUE_VIDEO_INNER_SIZE 300
@@ -205,7 +206,7 @@ void YMediaDecode::DecodeThread()
 	is_manual_stop_ = false;
 	uint8_t* pic_buff=nullptr;
 
-	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(ReadBuff, MemReadStruct{this});
+	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(ReadBuff, SeekBuff, MemReadStruct{this});
 	format_ctx_ = format;
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
@@ -488,6 +489,16 @@ int YMediaDecode::ReadBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
 		return -1;
 	}
 	return -1;
+}
+
+int64_t YMediaDecode::SeekBuff(void *opaque, int64_t offset, int whence)
+{
+	std::shared_ptr<MemReadStruct>* op = (std::shared_ptr<MemReadStruct>*)opaque;
+	if (op  && *op)
+	{
+		return (*op)->target->seek_func_(opaque, offset, whence);
+	}
+	return	-1;
 }
 
 void YMediaDecode::NotifyDecodeStatus(DecodeError error)

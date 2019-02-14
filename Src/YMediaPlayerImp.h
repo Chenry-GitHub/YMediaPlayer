@@ -59,6 +59,8 @@ protected:
 	bool OnVideoSeekFunction();
 
 	int OnReadMem(char*data,int len);
+
+	int64_t OnSeekMem(void *opaque, int64_t offset, int whence);
 private:
 	void NotifyPlayerStatus(PlayerStatus);
 
