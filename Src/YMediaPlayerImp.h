@@ -69,6 +69,7 @@ private:
 	MediaInfo media_info_;
 	YMediaDecode  *decoder_;
 	std::ifstream read_fs_;
+	FILE* file_;
 	
 	//this is for synchronization
 	StatusFunc status_func_;
