@@ -69,8 +69,7 @@ TEST::TEST(QWidget *parent)
 		player_->Play();
 	});
 
-	player_ = CreatePlayer(MODE_WIN_WAV, MODE_WIN_GDI,this);
-	player_->SetDisplayWindow((void*)ui.lab_video->winId());
+	player_ = CreatePlayer(MODE_WIN_WAV, MODE_USER,this);
 
 	player_->SetDurationChangedFunction([](void*opa,int dur) {
 		TEST *widget = (TEST*)opa;

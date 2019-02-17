@@ -152,9 +152,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Src\GDIVideo.cpp" />
+    <ClCompile Include="..\..\..\Src\ConstomVideo.cpp" />
     <ClCompile Include="..\..\..\Src\OpenALAudio.cpp" />
-    <ClCompile Include="..\..\..\Src\OpenGLVideo.cpp" />
     <ClCompile Include="..\..\..\Src\WavAudio.cpp" />
     <ClCompile Include="..\..\..\Src\YMediaPlayerImp.cpp" />
     <ClCompile Include="..\..\..\Src\YMediaDecode.cpp" />
@@ -165,9 +164,8 @@
     <ClInclude Include="..\..\..\Src\BaseControl.h" />
     <ClInclude Include="..\..\..\Src\BasePlatform.h" />
     <ClInclude Include="..\..\..\Src\BaseVideo.h" />
-    <ClInclude Include="..\..\..\Src\GDIVideo.h" />
+    <ClInclude Include="..\..\..\Src\ConstomVideo.h" />
     <ClInclude Include="..\..\..\Src\OpenALAudio.h" />
-    <ClInclude Include="..\..\..\Src\OpenGLVideo.h" />
     <ClInclude Include="..\..\..\Src\ThreadSafe_Queue.h" />
     <ClInclude Include="..\..\..\Src\WavAudio.h" />
     <ClInclude Include="..\..\..\Src\YMediaComm.h" />

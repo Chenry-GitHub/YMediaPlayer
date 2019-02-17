@@ -175,7 +175,7 @@ public:
 		av_dict_set(&opts, "stimeout", "3000000", 0);//设置超时3秒,rtsp
 		av_dict_set(&opts, "timeout", "3000000", 0);//设置超时3秒,udp,http
 		last_time_ = time(NULL);
-		if (avformat_open_input(&ctx_, filename, 0, &opts) != 0)
+		if (avformat_open_input(&ctx_, filename, 0, NULL) != 0)
 		{
 			return false;
 		}

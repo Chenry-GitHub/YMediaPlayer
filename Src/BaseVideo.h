@@ -15,8 +15,6 @@ public:
 	}
 	~BaseVideo(){}
 
-	virtual void SetDisplay(void *) = 0;
-
 	void Seek(float percent)
 	{
 		clock_ = duration_*percent;

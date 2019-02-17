@@ -27,8 +27,6 @@ public:
 
 	virtual void Seek(float pos) = 0;
 
-	virtual void SetDisplayWindow(void*) = 0;
-
 	virtual void SetOpaque(void*)=0;
 
 	virtual void SetDurationChangedFunction(DurFunc func) = 0;

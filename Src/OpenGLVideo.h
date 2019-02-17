@@ -4,7 +4,7 @@
 #include <glm.hpp>
 #include <ext.hpp>
 #include <glew.h>
-#include <glfw3.h>
+//#include <glfw3.h>
 #include <gl/GL.h>
 
 class OpenGLVideo:public BaseVideo
@@ -14,7 +14,6 @@ public:
 	~OpenGLVideo();
 ;
 
-virtual void SetDisplay(void *) override;
 
 protected:
 	virtual void PlayThread() override;
@@ -26,6 +25,6 @@ protected:
 	GLuint TextureID;
 	GLuint vert_shader, frag_shader;
 	GLuint program;
-	GLFWwindow * win_;
+//	GLFWwindow * win_;
 };
 
