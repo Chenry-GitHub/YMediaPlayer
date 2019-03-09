@@ -8,7 +8,7 @@
 #include <QDebug>
 #include <QFileDialog>
 #include <QPainter>
-
+#include <windows.h>
 
 
 TEST::TEST(QWidget *parent)
@@ -69,8 +69,7 @@ TEST::TEST(QWidget *parent)
 		player_->Play();
 	});
 
-	player_ = CreatePlayer(MODE_WIN_WAV, MODE_WIN_GDI,this);
-	player_->SetDisplayWindow((void*)ui.lab_video->winId());
+	player_ = CreatePlayer(MODE_WIN_WAV, MODE_USER,this);
 
 	player_->SetDurationChangedFunction([](void*opa,int dur) {
 		TEST *widget = (TEST*)opa;
@@ -84,6 +83,7 @@ TEST::TEST(QWidget *parent)
 	player_->SetUserHandleVideoFunction([](void *opa, void*data, int width, int height) {
 		TEST *widget = (TEST*)opa;
 		emit widget->sig_Update(data, width, height);
+		//Sleep(100);
 	});
 
 }
