@@ -6,9 +6,8 @@
 #include "YMediaDecode.h"
 
 #include "OpenALAudio.h"
-#include "OpenGLVideo.h"
+#include "ConstomVideo.h"
 #if PLATFORM_IS_WIN32
-#include "GDIVideo.h"
 #include "WavAudio.h"
 #endif
 
@@ -44,15 +43,8 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	//this is for video mode
 	switch (video_mode)
 	{
-#if PLATFORM_IS_WIN32
-	case MODE_WIN_GDI:
-	{
-		video_ = new GDIVideo();
-		break;
-	}
-#endif
-	case MODE_OPENGL:
-		video_ = new OpenGLVideo();
+	case MODE_USER:
+		video_ = new ConstomVideo();
 		break;
 	}
 	video_->SetDataFunction(std::bind(&YMediaPlayerImp::OnVideoDataFunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
@@ -134,10 +126,6 @@ void YMediaPlayerImp::Seek(float pos)
 	video_->Seek(pos);
 }
 
-void YMediaPlayerImp::SetDisplayWindow(void* handle)
-{
-	video_->SetDisplay(handle);
-}
 
 void YMediaPlayerImp::SetDurationChangedFunction(DurFunc func)
 {

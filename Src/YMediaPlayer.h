@@ -10,7 +10,7 @@ using CurFunc = void(*)(void *opaque,int);
 using StatusFunc = void(*)(PlayerStatus);
 using VideoFunc = void(*)(void *opaque, void *data,int width,int height);
 
-class YMEDIA_DECL YMediaPlayer
+class YMediaPlayer
 {
 public:
 	virtual ~YMediaPlayer() {};
@@ -26,8 +26,6 @@ public:
 	virtual bool Stop() = 0;
 
 	virtual void Seek(float pos) = 0;
-
-	virtual void SetDisplayWindow(void*) = 0;
 
 	virtual void SetOpaque(void*)=0;
 

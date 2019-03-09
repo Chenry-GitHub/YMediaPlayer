@@ -3,10 +3,7 @@
 
 enum VideoPlayMode
 {
-#if PLATFORM_IS_WIN32
-	MODE_WIN_GDI,
-#endif
-	MODE_OPENGL,
+	MODE_USER,
 
 };
 

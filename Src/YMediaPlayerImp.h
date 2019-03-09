@@ -35,7 +35,6 @@ public:
 
 	virtual void Seek(float pos) override;
 
-	virtual void SetDisplayWindow(void*) override;
 
 	virtual void SetDurationChangedFunction(DurFunc func) override;
 
