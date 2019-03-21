@@ -8,7 +8,7 @@
 
 
 #define BLOCK_SIZE 9216 //4608*2
-#define BLOCK_COUNT 20
+#define BLOCK_COUNT 5
 
 WavAudio::WavAudio()
 	:is_seek_(false)
@@ -113,6 +113,7 @@ void WavAudio::PlayThread()
 		waveOutWrite(hWaveOut_, current, sizeof(WAVEHDR));
 
 		clock_map_[waveCurrentBlock_] = clock;
+
 
 		waveFreeBlockCount_--;
 		/*

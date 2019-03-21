@@ -85,7 +85,8 @@ TEST::TEST(QWidget *parent)
 		emit widget->sig_Update(data, width, height);
 		//Sleep(100);
 	});
-	ui.le_media_url->setText("http://hc.yinyuetai.com/uploads/videos/common/02D30168547A579F07E92D27B0DA34D0.mp4?sc=068dd881b47be705");
+	//http://hc.yinyuetai.com/uploads/videos/common/02D30168547A579F07E92D27B0DA34D0.mp4?sc=068dd881b47be705
+	ui.le_media_url->setText("D:/video.mp4");
 }
 
 TEST::~TEST()
