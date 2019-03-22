@@ -18,11 +18,11 @@ TEST::TEST(QWidget *parent)
 	ui.le_media_url->setPlaceholderText("Please Input URL Here~");
 
 	QObject::connect(this, &TEST::sig_Update, this, [&](void *data, int w, int h) {
-		if (w <= 0 || h <= 0)
+		if (w <= 0 || h <= 0 || !data)
 			return;
 		img_ = QImage((uchar*)data, w, h, QImage::Format_RGB32).copy();
 		update(rect());
-	}, Qt::QueuedConnection);
+	}, Qt::BlockingQueuedConnection);
 	
 	QObject::connect(this, &TEST::sig_Dur, this, [&](int dur) {
 		QTime tim(dur / 3600, dur / 60, dur % 60, 0);
@@ -86,7 +86,7 @@ TEST::TEST(QWidget *parent)
 		//Sleep(100);
 	});
 	//http://hc.yinyuetai.com/uploads/videos/common/02D30168547A579F07E92D27B0DA34D0.mp4?sc=068dd881b47be705
-	ui.le_media_url->setText("D:/video.mp4");
+	ui.le_media_url->setText("http://hc.yinyuetai.com/uploads/videos/common/02D30168547A579F07E92D27B0DA34D0.mp4?sc=068dd881b47be705");
 }
 
 TEST::~TEST()

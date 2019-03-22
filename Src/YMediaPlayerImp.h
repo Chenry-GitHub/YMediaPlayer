@@ -11,7 +11,7 @@
 
 #include "YMediaPlayer.h"
 
-
+#include "..\HttpDownload.h"
 
 
 class YMediaDecode;
@@ -63,7 +63,9 @@ protected:
 
 	bool OnUserDisplayFunction(void *data,int width,int height);
 
-	int OnReadMem(char*data,int len);
+	int64_t OnReadMem(char*data,int len);
+
+	int64_t OnSeekMem(int64_t offset, int whence);
 private:
 	void NotifyPlayerStatus(PlayerStatus);
 
@@ -73,6 +75,8 @@ private:
 	YMediaDecode  *decoder_;
 
 	
+	int64_t cur_pos_ = 0;
+
 	//this is for synchronization
 	StatusFunc status_func_;
 
@@ -85,5 +89,5 @@ private:
 
 	void *opaque_;
 
-
+	HttpDownload * network_ = nullptr;
 };

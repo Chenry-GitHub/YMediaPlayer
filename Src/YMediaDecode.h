@@ -6,9 +6,10 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <algorithm>
 using namespace std;
 
-#include <time.h>
+
 
 
 extern "C"
@@ -68,6 +69,16 @@ public:
 		media_func_ = func;
 	}
 
+	/*Play的Read回调方法*/
+	void SetReadMemFunction(std::function<int (char *data, int len)> func)
+	{
+		read_func_ = func;
+	}
+
+	void SetSeekMemFunction(std::function<int64_t(int64_t offset, int whence)> func)
+	{
+		seek_func_ = func;
+	}
 
 	/*Play层调用，释放播放后的包体*/
 	void FreeAudioPackageInfo(AudioPackageInfo*);
@@ -102,6 +113,10 @@ protected:
 	/*退出解码线程需要调用的*/
 	void FlushVideoDecodec();
 	void FlushAudioDecodec();
+
+	static int ReadBuff(void *opaque, uint8_t *buf, int buf_size);
+
+	static int64_t SeekBuff(void *opaque, int64_t offset, int whence);
 private:
 
 	void NotifyDecodeStatus(DecodeError);
@@ -144,14 +159,68 @@ private:
 	
 	std::function<void (DecodeError)> error_func_;
 	std::function<void(MediaInfo)> media_func_;
+	std::function<int(char *data, int len)> read_func_;
+	std::function<int64_t(int64_t offset, int whence)> seek_func_;
+
 };
+
+struct MemReadStruct {
+	YMediaDecode *target;
+};
+using ReadFunc = int(*) (void *opaque, uint8_t *buf, int buf_size);
+using SeekFunc = int64_t(*) (void *opaque, int64_t offset, int whence);
 
 class FormatCtx {
 public:
-	inline FormatCtx()
+	inline FormatCtx(ReadFunc read_func, SeekFunc seek_func,MemReadStruct read)
 		: open_input_(false)
 	{
+		readst_ = std::make_shared<MemReadStruct>(read);
+#define  READ_BUFFER_SIZE 32768 //32KB
+		buffer_ = (unsigned char*)av_malloc(READ_BUFFER_SIZE);
+		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &readst_, read_func, NULL, seek_func);
 		ctx_= avformat_alloc_context();
+
+		std::memset(buffer_, 0, READ_BUFFER_SIZE);
+
+	
+		int size = READ_BUFFER_SIZE - AVPROBE_PADDING_SIZE;
+
+	//	const size_t probeSize = 4096;
+	//	const size_t bufSize = probeSize + AVPROBE_PADDING_SIZE;
+
+	//	std::unique_ptr<std::uint8_t[]> buffer(new std::uint8_t[bufSize]);
+
+		int readBytes  = read_func(&readst_, buffer_, size);
+
+
+		// Fill any padding with 0s.
+		//std::fill(buffer.get() + actuallyRead, buffer.get() + bufSize, 0);
+
+		seek_func(&readst_, 0, SEEK_SET);
+	
+
+		/*if (actuallyRead < 1) {
+			throw IOException(_("MediaParserFfmpeg could not read probe data "
+				"from input"));
+		}*/
+
+		// Probe the file to detect the format
+		AVProbeData probe_data;
+		probe_data.filename = "";
+		probe_data.buf = buffer_;
+		probe_data.buf_size = readBytes;
+#if LIBAVFORMAT_VERSION_MAJOR > 55
+		probe_data.mime_type = nullptr;
+#endif
+
+		AVInputFormat* ret = av_probe_input_format(&probe_data, 1);
+		
+		ctx_->pb = ioctx_;
+		ctx_->iformat = ret;
+		ctx_->flags = AVFMT_FLAG_CUSTOM_IO;
+
+
 		pkg_ = av_packet_alloc();
 		av_init_packet(pkg_);
 	}
@@ -167,15 +236,10 @@ public:
 
 	bool InitFormatCtx(const char* filename)
 	{
-		ctx_->interrupt_callback.callback = BlockCallback;//超时回调
-		ctx_->interrupt_callback.opaque = this;
-		AVDictionary* opts = NULL;
-		av_dict_set(&opts, "rtsp_transport", "tcp", 0); //设置tcp or udp，默认一般优先tcp再尝试udp
-		av_dict_set(&opts, "rtsp_transport", "udp", 0);
-		av_dict_set(&opts, "stimeout", "3000000", 0);//设置超时3秒,rtsp
-		av_dict_set(&opts, "timeout", "3000000", 0);//设置超时3秒,udp,http
-		last_time_ = time(NULL);
-		if (avformat_open_input(&ctx_, filename, 0, NULL) != 0)
+		
+		
+
+		if (avformat_open_input(&ctx_, "", 0, 0) < 0)
 		{
 			return false;
 		}
@@ -186,10 +250,9 @@ public:
 		}
 		return true;
 	}
-	
+
 
 	inline bool read() {
-		last_time_ = time(NULL);
 		return  av_read_frame(ctx_, pkg_) >= 0;
 	}
 
@@ -204,15 +267,11 @@ public:
 	}
 
 	bool open_input_;
+	unsigned char *buffer_;
+	AVIOContext *ioctx_;
 	AVFormatContext* ctx_;
 	AVPacket *pkg_;
-	int last_time_;
-protected:
-	static int BlockCallback(void*opa)
-	{
-		FormatCtx *ctx = (FormatCtx*)opa;
-		return time(NULL) - ctx->last_time_>=3;
-	}
+	shared_ptr<MemReadStruct> readst_;
 };
 
 class CodecCtx {

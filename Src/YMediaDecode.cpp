@@ -1,6 +1,7 @@
 ﻿#include "YMediaDecode.h"
 
 
+
 #define  SEEK_TIME_DEFAULT -1.0
 #define  QUE_AUDIO_INNER_SIZE 400
 #define  QUE_VIDEO_INNER_SIZE 300
@@ -205,7 +206,7 @@ void YMediaDecode::DecodeThread()
 	is_manual_stop_ = false;
 	uint8_t* pic_buff=nullptr;
 
-	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>();
+	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(YMediaDecode::ReadBuff, YMediaDecode::SeekBuff, MemReadStruct{this});
 	format_ctx_ = format;
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
@@ -303,16 +304,16 @@ void YMediaDecode::DecodeThread()
 		{
 			if (audio_seek_convert_dur_!= SEEK_TIME_DEFAULT)
 			{
-				//double abs_value = abs(format->pkg_->pts - audio_seek_convert_dur_);
-				//if (abs_value <= AV_TIME_BASE* 5)//5秒
-				//{
+				double abs_value = abs(format->pkg_->pts - audio_seek_convert_dur_);
+				if (abs_value <= AV_TIME_BASE* 5)//5秒
+				{
 					audio_seek_convert_dur_ = SEEK_TIME_DEFAULT;
 					audio_cnd_.notify_all();
 					
 					InnerPacketInfo info;
 					info.pkg = av_packet_clone(format->pkg_);
 					audio_inner_que_.push(info);
-				//}
+				}
 			}
 			else
 			{
@@ -325,9 +326,9 @@ void YMediaDecode::DecodeThread()
 		{
 			if (video_seek_convert_dur_ != SEEK_TIME_DEFAULT)
 			{
-				//double abs_value = abs(format->pkg_->pts - video_seek_convert_dur_);
-				//if (abs_value <= AV_TIME_BASE * 5)
-				//{
+				double abs_value = abs(format->pkg_->pts - video_seek_convert_dur_);
+				if (abs_value <= AV_TIME_BASE * 5)
+				{
 					if (format->pkg_->flags&AV_PKT_FLAG_KEY)
 					{
 						video_seek_convert_dur_ = SEEK_TIME_DEFAULT;
@@ -337,7 +338,7 @@ void YMediaDecode::DecodeThread()
 						info.pkg = av_packet_clone(format->pkg_);
 						video_inner_que_.push(info);
 					}
-				//}
+				}
 			}
 			else
 			{
@@ -473,6 +474,32 @@ void YMediaDecode::FlushAudioDecodec()
 		info_audio.flag = FLAG_FLUSH_DECODEC;
 		DoConvertAudio(info_audio.pkg);
 	}
+}
+
+int YMediaDecode::ReadBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
+{
+	std::shared_ptr<MemReadStruct>* op = (std::shared_ptr<MemReadStruct>*)opaque;
+	if (op  && *op)
+	{
+		int64_t result = (*op)->target->read_func_((char*)read_buf, read_buf_size);
+		if (result > 0)
+		{
+			return result;
+		}
+		return -1;
+	}
+	return -1;
+}
+
+int64_t YMediaDecode::SeekBuff(void *opaque, int64_t offset, int whence)
+{
+	std::shared_ptr<MemReadStruct>* op = (std::shared_ptr<MemReadStruct>*)opaque;
+	if (op  && *op)
+	{
+		int64_t result = (*op)->target->seek_func_(offset, whence);
+		return result;
+	}
+	return	-1;
 }
 
 void YMediaDecode::NotifyDecodeStatus(DecodeError error)
