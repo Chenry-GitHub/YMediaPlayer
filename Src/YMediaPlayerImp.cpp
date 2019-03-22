@@ -79,7 +79,10 @@ bool YMediaPlayerImp::SetMediaFromFile(const char* path_file)
 	network_ = new HttpDownload;
 	network_->GetNetworkRequest()->SetUrl(path_file);
 	network_->GetNetwork()->ASyncGet2(network_->GetNetworkRequest(), network_);
-
+	network_->func_ = std::bind([&](float per) {
+		if (buffer_func_)
+			buffer_func_(opaque_,per);
+	}, std::placeholders::_1);
 
 
 	decoder_->SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
@@ -158,6 +161,11 @@ void YMediaPlayerImp::SetOpaque(void*opa)
 void YMediaPlayerImp::SetUserHandleVideoFunction(VideoFunc func)
 {
 	user_video_func_ = func;
+}
+
+void YMediaPlayerImp::SetBufferFunction(BufferFunc func)
+{
+	buffer_func_ = func;
 }
 
 void YMediaPlayerImp::OnAudioDataFree(char *data)

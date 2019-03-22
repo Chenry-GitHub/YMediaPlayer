@@ -44,6 +44,9 @@ public:
 
 	virtual void SetUserHandleVideoFunction(VideoFunc func) override;
 
+
+	virtual void SetBufferFunction(BufferFunc func) override;
+
 protected:
 	void OnAudioDataFree(char *data);
 
@@ -83,6 +86,7 @@ private:
 	DurFunc dur_func_;
 	CurFunc cur_func_;
 	VideoFunc user_video_func_;
+	BufferFunc buffer_func_;
 
 	BaseAudio * audio_;
 	BaseVideo * video_;
