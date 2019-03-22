@@ -1,3 +1,7 @@
+### 简介
+A simple player demo,supported to cache file,download progress
+![Image text](https://github.com/what951006/YMediaPlayer/README/pic_0.png)
+
 ### 一、开发环境
 vs2015+Qt5
 ### 二、编译方式
@@ -11,3 +15,4 @@ vs2015+Qt5
 
 ### 未解决的问题
 1、播放rtmp如果源视频网络卡，即卡在获取流信息的地方，可能导致程序卡住,使用AVIContext替换原来的读流方式
+
