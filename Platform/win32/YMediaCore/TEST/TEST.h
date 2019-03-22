@@ -22,6 +22,8 @@ signals:
 	void sig_Pos(int);
 
 	void sig_Update(void *,int ,int);
+
+	void sig_Buffer(float );
 private:
 	Ui::TESTClass ui;
 

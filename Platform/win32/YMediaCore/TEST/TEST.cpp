@@ -23,7 +23,7 @@ TEST::TEST(QWidget *parent)
 		img_ = QImage((uchar*)data, w, h, QImage::Format_RGB32).copy();
 		update(rect());
 	}, Qt::BlockingQueuedConnection);
-	
+
 	QObject::connect(this, &TEST::sig_Dur, this, [&](int dur) {
 		QTime tim(dur / 3600, dur / 60, dur % 60, 0);
 		QString str = tim.toString("hh:mm:ss");
@@ -31,7 +31,7 @@ TEST::TEST(QWidget *parent)
 		ui.slider_media->setMaximum(dur);
 		ui.slider_media->setMinimum(0);
 		ui.slider_media->setValue(0);
-	},Qt::QueuedConnection);
+	}, Qt::QueuedConnection);
 
 
 	QObject::connect(this, &TEST::sig_Pos, this, [&](int curpos) {
@@ -39,6 +39,10 @@ TEST::TEST(QWidget *parent)
 		QString str = tim.toString("hh:mm:ss");
 		ui.lab_cur->setText(str);
 		ui.slider_media->setValue(curpos);
+	}, Qt::QueuedConnection);
+
+	QObject::connect(this, &TEST::sig_Buffer, this, [&](float percent) {
+		ui.slider_media->SetBufferPercent(percent);
 	}, Qt::QueuedConnection);
 
 	QObject::connect(ui.slider_media, &DerSlider::sig_Clicked, this, [&](float value)
@@ -69,22 +73,28 @@ TEST::TEST(QWidget *parent)
 		player_->Play();
 	});
 
-	player_ = CreatePlayer(MODE_WIN_WAV, MODE_USER,this);
+	player_ = CreatePlayer(MODE_WIN_WAV, MODE_USER, this);
 
-	player_->SetDurationChangedFunction([](void*opa,int dur) {
+	player_->SetDurationChangedFunction([](void*opa, int dur) {
 		TEST *widget = (TEST*)opa;
 		emit widget->sig_Dur(dur);
 	});
-	player_->SetCurrentChangedFucnton([](void*opa,int cur){
+	player_->SetCurrentChangedFucnton([](void*opa, int cur) {
 		TEST *widget = (TEST*)opa;
 		emit widget->sig_Pos(cur);
-	}); 
-	
+	});
+
 	player_->SetUserHandleVideoFunction([](void *opa, void*data, int width, int height) {
 		TEST *widget = (TEST*)opa;
 		emit widget->sig_Update(data, width, height);
 		//Sleep(100);
 	});
+
+	player_->SetBufferFunction([](void *opaque, float percent){
+		TEST *widget = (TEST*)opaque;
+		emit widget->sig_Buffer(percent);
+	});
+
 	//http://hc.yinyuetai.com/uploads/videos/common/02D30168547A579F07E92D27B0DA34D0.mp4?sc=068dd881b47be705
 	ui.le_media_url->setText("http://hc.yinyuetai.com/uploads/videos/common/02D30168547A579F07E92D27B0DA34D0.mp4?sc=068dd881b47be705");
 }

@@ -3,7 +3,7 @@
 #include "BaseHttpASync.h"
 
 #include <string>
-
+#include <functional>
 class HttpDownload :public BaseHttpAsync
 {
 
@@ -21,10 +21,15 @@ public:
 
 
 	int total_=0;
+	std::function<void (float)> func_=nullptr;
 	virtual void OnDataProgress(double total, double now) override
 	{
 		printf("OnDataProgress %f,%f\n",total,now);
 		total_ = total;
+		if (func_)
+		{
+			func_((float)now/total);
+		}
 	}
 
 
