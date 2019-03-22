@@ -251,7 +251,7 @@ bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
 	return false;
 }
 
-int64_t YMediaPlayerImp::OnReadMem(char*data, int len)
+int YMediaPlayerImp::OnReadMem(char*data, int len)
 {
 	int64_t download_len = network_->GetNetwork()->GetMemLen();
 	while (download_len < len + cur_pos_)
@@ -261,7 +261,7 @@ int64_t YMediaPlayerImp::OnReadMem(char*data, int len)
 		download_len = network_->GetNetwork()->GetMemLen();
 	}
 
-	int64_t nbytes = (int64_t)std::min<int>(download_len - cur_pos_, len);
+	int nbytes = (int64_t)std::min<int>(download_len - cur_pos_, len);
 	if (nbytes <= 0) {
 		return 0;
 	}

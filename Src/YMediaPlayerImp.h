@@ -63,7 +63,7 @@ protected:
 
 	bool OnUserDisplayFunction(void *data,int width,int height);
 
-	int64_t OnReadMem(char*data,int len);
+	int OnReadMem(char*data,int len);
 
 	int64_t OnSeekMem(int64_t offset, int whence);
 private:
