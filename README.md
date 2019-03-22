@@ -1,6 +1,6 @@
 ### 简介
 A simple player demo,supported to cache file,download progress
-![Image text](https://github.com/what951006/YMediaPlayer/README/pic_0.png)
+![Image text](https://github.com/what951006/YMediaPlayer/blob/dev/README/pic_0.png)
 
 ### 一、开发环境
 vs2015+Qt5
