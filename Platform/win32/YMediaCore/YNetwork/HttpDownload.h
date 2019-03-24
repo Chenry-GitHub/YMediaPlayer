@@ -8,6 +8,10 @@ class HttpDownload :public BaseHttpAsync
 {
 
 public:
+	~HttpDownload()
+	{
+		func_ = nullptr;
+	}
 	virtual bool OnAnalysis(const std::string &data) override
 	{
 		return true;
@@ -24,7 +28,7 @@ public:
 	std::function<void (float)> func_=nullptr;
 	virtual void OnDataProgress(double total, double now) override
 	{
-		printf("OnDataProgress %f,%f\n",total,now);
+	//	printf("OnDataProgress %f,%f\n",total,now);
 		total_ = total;
 		if (func_)
 		{

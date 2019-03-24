@@ -191,8 +191,12 @@ public:
 
 	//	std::unique_ptr<std::uint8_t[]> buffer(new std::uint8_t[bufSize]);
 
+		seek_func(&readst_, 0, SEEK_SET);
+
 		int readBytes  = read_func(&readst_, buffer_, size);
 
+		if (readBytes <= 0)
+			return;
 
 		// Fill any padding with 0s.
 		//std::fill(buffer.get() + actuallyRead, buffer.get() + bufSize, 0);

@@ -23,7 +23,7 @@ public:
 	YMediaPlayerImp(AudioPlayMode audio_mode,VideoPlayMode video_mode);
 	virtual~YMediaPlayerImp() override;
 	
-	virtual bool SetMediaFromFile(const char* path_file) override;
+	virtual bool SetMedia(const char* path_file) override;
 	
 	virtual bool Play() override;
 
@@ -93,5 +93,5 @@ private:
 
 	void *opaque_;
 
-	HttpDownload * network_ = nullptr;
+	HttpDownload  network_ ;
 };

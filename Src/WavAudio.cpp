@@ -8,7 +8,7 @@
 
 
 #define BLOCK_SIZE 9216 //4608*2
-#define BLOCK_COUNT 5
+#define BLOCK_COUNT 6
 
 WavAudio::WavAudio()
 	:is_seek_(false)
@@ -137,7 +137,7 @@ void WavAudio::PlayThread()
 		free_func_(data);
 	}
 	WaitForPlayDone();
-
+	printf("Audio thread quit\n");
 }
 
 void WavAudio::WaitForPlayDone()

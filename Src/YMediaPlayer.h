@@ -16,7 +16,7 @@ class YMediaPlayer
 public:
 	virtual ~YMediaPlayer() {};
 
-	virtual bool SetMediaFromFile(const char* path_file) =0;
+	virtual bool SetMedia(const char* path_file) =0;
 
 	virtual bool Play() = 0;
 

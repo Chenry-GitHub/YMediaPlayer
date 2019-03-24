@@ -58,6 +58,10 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	decoder_->SetReadMemFunction(std::bind(&YMediaPlayerImp::OnReadMem, this, std::placeholders::_1, std::placeholders::_2));
 	decoder_->SetSeekMemFunction(std::bind(&YMediaPlayerImp::OnSeekMem, this, std::placeholders::_1, std::placeholders::_2));
 
+	network_.func_ = std::bind([&](float per) {
+		if (buffer_func_)
+			buffer_func_(opaque_, per);
+	}, std::placeholders::_1);
 }
 
 YMediaPlayerImp::~YMediaPlayerImp()
@@ -67,22 +71,17 @@ YMediaPlayerImp::~YMediaPlayerImp()
 }
 
 
-bool YMediaPlayerImp::SetMediaFromFile(const char* path_file)
+bool YMediaPlayerImp::SetMedia(const char* path_file)
 {
 	Stop();
 	printf("Stop\n");
 
 	path_file_ = path_file;
 
-	if (network_)
-		delete network_;
-	network_ = new HttpDownload;
-	network_->GetNetworkRequest()->SetUrl(path_file);
-	network_->GetNetwork()->ASyncGet2(network_->GetNetworkRequest(), network_);
-	network_->func_ = std::bind([&](float per) {
-		if (buffer_func_)
-			buffer_func_(opaque_,per);
-	}, std::placeholders::_1);
+
+	network_.GetNetworkRequest()->SetUrl(path_file);
+	network_.GetNetwork()->ASyncGet2(network_.GetNetworkRequest(), &network_);
+
 
 
 	decoder_->SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
@@ -118,14 +117,15 @@ bool YMediaPlayerImp::IsPlaying()
 
 bool YMediaPlayerImp::Stop()
 {
-	decoder_->ConductAudioBlocking();
 	audio_->Stop();
+	decoder_->ConductAudioBlocking();
 	audio_->EndPlayThread();
 
-	decoder_->ConductVideoBlocking();
 	video_->Stop();
+	decoder_->ConductVideoBlocking();
 	video_->EndPlayThread();
 
+	network_.GetNetwork()->Stop();
 	decoder_->StopDecode();
 	return true;
 }
@@ -182,7 +182,7 @@ void YMediaPlayerImp::OnAudioDataFree(char *data)
 
 bool YMediaPlayerImp::OnSynchronizeVideo()
 {
-	while (!audio_->IsStop())
+	while (!audio_->IsStop() || !video_->IsStop())
 	{
 		//printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
 		if (video_->GetClock()<= audio_->GetClock())
@@ -261,12 +261,16 @@ bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
 
 int YMediaPlayerImp::OnReadMem(char*data, int len)
 {
-	int64_t download_len = network_->GetNetwork()->GetMemLen();
-	while (download_len < len + cur_pos_)
+	int64_t file_len = network_.GetFileLength();
+	int64_t download_len = network_.GetNetwork()->GetMemLen();
+	while (download_len < len + cur_pos_ && cur_pos_+len <file_len || file_len<=0)
 	{
 		std::this_thread::sleep_for(std::chrono::microseconds(20));
 
-		download_len = network_->GetNetwork()->GetMemLen();
+		download_len = network_.GetNetwork()->GetMemLen();
+
+
+		file_len = network_.GetFileLength();
 	}
 
 	int nbytes = (int64_t)std::min<int>(download_len - cur_pos_, len);
@@ -274,7 +278,7 @@ int YMediaPlayerImp::OnReadMem(char*data, int len)
 		return 0;
 	}
 
-	char * data_src = (char *)network_->GetNetwork()->GetMemPtr();
+	char * data_src = (char *)network_.GetNetwork()->GetMemPtr();
 	memcpy_s(data, (int)nbytes, data_src + cur_pos_, (int)nbytes);
 
 	cur_pos_ += nbytes;
@@ -358,8 +362,8 @@ int64_t YMediaPlayerImp::OnSeekMem(int64_t offset, int whence)
 
 
 	//return cur_pos_;
-	int64_t download_len = network_->GetNetwork()->GetMemLen();
-	int64_t total_len = network_->total_;
+	int64_t download_len = network_.GetNetwork()->GetMemLen();
+	int64_t total_len = network_.total_;
 	int64_t newPos = -1;
 	switch (whence) {
 	case SEEK_SET: newPos = offset; break;
