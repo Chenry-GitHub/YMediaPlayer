@@ -1,9 +1,10 @@
 #pragma once
 #include "BaseAudio.h"
 
+#if USE_OPENAL
+
 #include <al.h>
 #include <alc.h>
-
 #include <map>
 
 #define NUMBUFFERS              4
@@ -38,3 +39,4 @@ private:
 	
 };
 
+#endif//USE_OPENAL

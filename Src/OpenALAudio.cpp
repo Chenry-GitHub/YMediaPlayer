@@ -1,5 +1,7 @@
 #include "OpenALAudio.h"
 
+#if USE_OPENAL
+
 #include <fstream>
 std::ofstream out_file;
 
@@ -190,3 +192,5 @@ bool OpenALAudio::FillAudioBuff(ALuint& buf)
 		free_func_(data);
 		return true;
 }
+
+#endif//USE_OPENAL

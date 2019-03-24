@@ -12,7 +12,9 @@ enum AudioPlayMode
 #if PLATFORM_IS_WIN32
 	MODE_WIN_WAV,
 #endif
+#ifdef USE_OPENAL
 	MODE_OPENAL,
+#endif
 };
 
 

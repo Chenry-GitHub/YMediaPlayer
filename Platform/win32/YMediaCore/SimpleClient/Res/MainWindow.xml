@@ -24,7 +24,7 @@
 	
 	<HorizontalLayout height="10" childpadding="10">
 		<DerMainSlider name="progress_slider" text="" font="0" bkcolor="0xff7A80A2" height="6" padding="0,2,0,2" minwidth="100"/>
-		<Label  name="progress_info" text="00:00:00/00:00:00" align="right" nativetextcolor="#FF000000" width="100"/>
+		<Label  name="progress_info" text="00:00:00/00:00:00" align="right" nativetextcolor="#FF000000" width="110"/>
 	</HorizontalLayout>
 	
 	<HorizontalLayout height ="40" childpadding="10">

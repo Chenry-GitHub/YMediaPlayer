@@ -20,12 +20,14 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	//this is for initialize audio
 	switch (audio_mode)
 	{
+#if  USE_OPENAL
 		case MODE_OPENAL:
 		{
 			OpenALAudio::InitPlayer();
 			audio_ = new OpenALAudio();
 			break;
 		}
+#endif //USE_OPENAL
 #if PLATFORM_IS_WIN32
 		case MODE_WIN_WAV:
 		{
