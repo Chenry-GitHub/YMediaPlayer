@@ -212,10 +212,10 @@ public:
 	}
 
 	inline ~FormatCtx() {
-		if (buffer_)
-		{
-			av_free(buffer_);
-		}
+		
+		if(ioctx_)
+			avio_context_free(&ioctx_);
+
 		if (open_input_)
 		{
 			avformat_close_input(&ctx_);
