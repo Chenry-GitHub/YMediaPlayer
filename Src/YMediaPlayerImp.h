@@ -47,6 +47,8 @@ public:
 
 	virtual void SetBufferFunction(BufferFunc func) override;
 
+	virtual void SetStatusFunction(StatusFunc func) override;
+
 protected:
 	void OnAudioDataFree(char *data);
 

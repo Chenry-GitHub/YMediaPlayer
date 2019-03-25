@@ -6,6 +6,20 @@
 
 StreamIOMgr::StreamIOMgr()
 {
+	http_stream_.buffer_func_ = buffer_func_;
+	http_stream_.status_buffering_func_ = std::bind([&]() {
+		if (status_func_)
+		{
+			status_func_(PlayerStatus::Buffering);
+		}
+	});
+	http_stream_.error_func_ = std::bind([&]() {
+		if (status_func_)
+		{
+			status_func_(PlayerStatus::ErrorUnknow);
+		}
+	});
+
 }
 
 
@@ -79,7 +93,6 @@ bool StreamIOMgr::SetUrl(const std::string &url)
 	if (temp.find("http://") != std::string::npos ||
 		temp.find("https://") != std::string::npos)
 	{
-		http_stream_.buffer_func_ = buffer_func_;
 		http_stream_.Start();
 		http_stream_.GetNetworkRequest()->SetUrl(url.c_str());
 		http_stream_.GetNetwork()->ASyncGet2(http_stream_.GetNetworkRequest(), &http_stream_);

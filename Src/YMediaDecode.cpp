@@ -211,7 +211,7 @@ void YMediaDecode::DecodeThread()
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
 		printf("InitFormatCtx Error\n");
-		NotifyDecodeStatus(ERROR_FILE_ERROR);
+		NotifyDecodeStatus(ERROR_FORMAT);
 		return;
 	}
 
@@ -230,7 +230,7 @@ void YMediaDecode::DecodeThread()
 	if (!audio_ctx->InitDecoder())
 	{
 		printf("audio_ctx.InitDecoder Error\n");
-		NotifyDecodeStatus(ERROR_NO_QUIT);
+		NotifyDecodeStatus(ERROR_FORMAT);
 		return;
 	}
 

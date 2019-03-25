@@ -60,10 +60,16 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	decoder_->SetReadMemFunction(std::bind(&YMediaPlayerImp::OnReadMem, this, std::placeholders::_1, std::placeholders::_2));
 	decoder_->SetSeekMemFunction(std::bind(&YMediaPlayerImp::OnSeekMem, this, std::placeholders::_1, std::placeholders::_2));
 
-	/*network_.func_ = std::bind([&](float per) {
+	io_mgr_.buffer_func_ = std::bind([&](float per) {
 		if (buffer_func_)
 			buffer_func_(opaque_, per);
-	}, std::placeholders::_1);*/
+	}, std::placeholders::_1);
+
+	io_mgr_.status_func_= std::bind([&](PlayerStatus status)
+	{
+		NotifyPlayerStatus(status);
+	},std::placeholders::_1);
+
 }
 
 YMediaPlayerImp::~YMediaPlayerImp()
@@ -167,6 +173,11 @@ void YMediaPlayerImp::SetBufferFunction(BufferFunc func)
 	buffer_func_ = func;
 }
 
+void YMediaPlayerImp::SetStatusFunction(StatusFunc func)
+{
+	status_func_ = func;
+}
+
 void YMediaPlayerImp::OnAudioDataFree(char *data)
 {
 	if (data)
@@ -195,7 +206,22 @@ bool YMediaPlayerImp::OnSynchronizeVideo()
 
 void YMediaPlayerImp::OnDecodeError(DecodeError error)
 {
-	printf("OnDecodeError  finished %d\n", error);
+	switch (error)
+	{
+	case ERROR_FORMAT:
+	{
+		NotifyPlayerStatus(PlayerStatus::ErrorFormat);
+	}
+		break;
+	case ERROR_PKG_ERROR:
+	{
+		NotifyPlayerStatus(PlayerStatus::ErrorUnknow);
+	}
+		break;
+	default:
+		break;
+	}
+	
 }
 
 void YMediaPlayerImp::OnMediaInfo(MediaInfo info)
@@ -274,5 +300,5 @@ int64_t YMediaPlayerImp::OnSeekMem(int64_t offset, int whence)
 void YMediaPlayerImp::NotifyPlayerStatus(PlayerStatus st)
 {
 	if (status_func_)
-		status_func_(st);
+		status_func_(opaque_,st);
 }

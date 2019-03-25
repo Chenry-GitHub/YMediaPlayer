@@ -6,6 +6,7 @@
 #include <fstream>
 #include <atomic>
 #include "..\HttpDownload.h"
+#include "YMediaComm.h"
 
 enum StreamType
 {
@@ -30,6 +31,9 @@ public:
 	int64_t Seek(int64_t offset ,int whence);
 
 	std::function <void(float)> buffer_func_ = nullptr;
+
+	std::function <void (PlayerStatus)> status_func_ = nullptr;
+
 protected:
 
 	//file stream

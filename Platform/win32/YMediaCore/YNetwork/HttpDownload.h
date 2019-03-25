@@ -58,6 +58,9 @@ public:
 		int64_t download_len = GetNetwork()->GetMemorySize();
 		while (download_len < len + cur_pos_ && cur_pos_ + len < file_len || file_len <= 0)
 		{
+			if (status_buffering_func_)
+				status_buffering_func_();
+
 			if (is_stop_)
 			{
 				return -1;
@@ -107,7 +110,9 @@ public:
 	int error_ = 0;
 	int file_len_=0;
 	std::function<void (float)> buffer_func_=nullptr;
+	std::function<void ()> status_buffering_func_ = nullptr;
 	std::function<void (bool)> error_func_=nullptr;
+	
 	virtual void OnDataProgress(double total, double now) override
 	{
 		file_len_ = total;

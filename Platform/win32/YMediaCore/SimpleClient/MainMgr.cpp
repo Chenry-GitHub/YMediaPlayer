@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "MainMgr.h"
 #include "utils/qaqlog/qaqlog.h"
+#include "YMediaComm.h"
 
 
 
@@ -46,7 +47,11 @@ void MainMgr::Init()
 		MainMgr * mgr = (MainMgr *)(opa);
 		mgr->main_ctl_.SetBufferPercent(percent);
 	});
-
+	player_->SetStatusFunction([](void *opa,PlayerStatus status){
+		MainMgr * mgr = (MainMgr *)(opa);
+		if(status == PlayerStatus::ErrorUnknow)
+			mgr->main_ctl_.SetPlayerError();
+	});
 }
 
 void MainMgr::UnInit()

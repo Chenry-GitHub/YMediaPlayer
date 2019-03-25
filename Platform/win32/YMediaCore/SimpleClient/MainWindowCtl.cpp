@@ -76,7 +76,6 @@ void MainWindowCtl::SetVideoImage(void* data, int w, int h)
 	memcpy(st->data, data, w*h*4);
 
 	PostMessage(main_win_->GetHWND(), EV_VIDEO, 0, (LPARAM)st);
-	//main_win_->ctl_video_display_->SetImage(data, w, h);
 }
 void MainWindowCtl::SetDuration(int dur)
 {
@@ -91,4 +90,9 @@ void MainWindowCtl::SetCurPos(int cur)
 void MainWindowCtl::SetBufferPercent(float percent)
 {
 	PostMessage(main_win_->GetHWND(), EV_PERCENT, 0, (LPARAM)(percent*100));
+}
+
+void MainWindowCtl::SetPlayerError()
+{
+	PostMessage(main_win_->GetHWND(), EV_ERROR, 0, (LPARAM)0);
 }

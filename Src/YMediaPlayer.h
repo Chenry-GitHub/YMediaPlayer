@@ -7,7 +7,7 @@
 #endif
 using DurFunc = void(*)(void *opaque,int);
 using CurFunc = void(*)(void *opaque,int);
-using StatusFunc = void(*)(PlayerStatus);
+using StatusFunc = void(*)(void *opaque,PlayerStatus);
 using VideoFunc = void(*)(void *opaque, void *data,int width,int height);
 using BufferFunc = void(*)(void *opaque, float percent);
 
@@ -37,6 +37,8 @@ public:
 	virtual void SetUserHandleVideoFunction(VideoFunc func) = 0;
 
 	virtual void SetBufferFunction(BufferFunc func) = 0;
+
+	virtual void SetStatusFunction(StatusFunc func) = 0;
 };
 
 YMEDIA_DECL YMediaPlayer* CreatePlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode,void* opaque);

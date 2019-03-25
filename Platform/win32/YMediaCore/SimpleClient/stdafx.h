@@ -33,7 +33,7 @@ enum USEREVENT
 	EV_DUR,
 	EV_CUR,
 	EV_PERCENT,
-
+	EV_ERROR,
 };
 
 struct EV_VIDEO_STRUCT

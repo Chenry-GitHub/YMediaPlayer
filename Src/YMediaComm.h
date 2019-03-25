@@ -18,18 +18,15 @@ enum AudioPlayMode
 };
 
 
-struct PlayerStatus
+enum PlayerStatus
 {
-	enum Status
-	{
-		Stop = 0,
-		Pause,
-		Playing,
-		During,
-		Done,
-		FileError,
-	};
-	Status status = Pause;
+	Stop = 0,
+	Pause,
+	Playing,
+	Buffering,
+	Done,
+	ErrorUnknow,
+	ErrorFormat,
 };
 
 
@@ -47,8 +44,7 @@ enum YMediaCallBackType
 enum DecodeError
 {
 	ERROR_NO_ERROR = 0,
-	ERROR_NO_QUIT,
-	ERROR_FILE_ERROR,
+	ERROR_FORMAT,
 	ERROR_PKG_ERROR,
 };
 

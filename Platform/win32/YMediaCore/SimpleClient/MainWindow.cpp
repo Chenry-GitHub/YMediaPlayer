@@ -72,6 +72,11 @@ LRESULT MainWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam,
 			
 		ctl_progress_slider_->SetBufferPercent(value);
 	}
+	else if (uMsg == EV_ERROR)
+	{
+		MessageBox(NULL,L"EV_ERROR",L"cap",NULL);
+	}
+
 	return __super::HandleCustomMessage(uMsg, wParam, lParam,bHandled);
 }
 
