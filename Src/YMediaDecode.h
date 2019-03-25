@@ -176,20 +176,16 @@ public:
 		: open_input_(false)
 	{
 		readst_ = std::make_shared<MemReadStruct>(read);
+		ctx_ = avformat_alloc_context();
+		pkg_ = av_packet_alloc();
+		av_init_packet(pkg_);
 #define  READ_BUFFER_SIZE 32768 //32KB
 		buffer_ = (unsigned char*)av_malloc(READ_BUFFER_SIZE);
-		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &readst_, read_func, NULL, seek_func);
-		ctx_= avformat_alloc_context();
+		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &readst_, read_func, NULL, seek_func);		
 
 		std::memset(buffer_, 0, READ_BUFFER_SIZE);
 
-	
 		int size = READ_BUFFER_SIZE - AVPROBE_PADDING_SIZE;
-
-	//	const size_t probeSize = 4096;
-	//	const size_t bufSize = probeSize + AVPROBE_PADDING_SIZE;
-
-	//	std::unique_ptr<std::uint8_t[]> buffer(new std::uint8_t[bufSize]);
 
 		seek_func(&readst_, 0, SEEK_SET);
 
@@ -198,18 +194,8 @@ public:
 		if (readBytes <= 0)
 			return;
 
-		// Fill any padding with 0s.
-		//std::fill(buffer.get() + actuallyRead, buffer.get() + bufSize, 0);
-
 		seek_func(&readst_, 0, SEEK_SET);
-	
 
-		/*if (actuallyRead < 1) {
-			throw IOException(_("MediaParserFfmpeg could not read probe data "
-				"from input"));
-		}*/
-
-		// Probe the file to detect the format
 		AVProbeData probe_data;
 		probe_data.filename = "";
 		probe_data.buf = buffer_;
@@ -223,13 +209,13 @@ public:
 		ctx_->pb = ioctx_;
 		ctx_->iformat = ret;
 		ctx_->flags = AVFMT_FLAG_CUSTOM_IO;
-
-
-		pkg_ = av_packet_alloc();
-		av_init_packet(pkg_);
 	}
 
 	inline ~FormatCtx() {
+		if (buffer_)
+		{
+			av_free(buffer_);
+		}
 		if (open_input_)
 		{
 			avformat_close_input(&ctx_);
@@ -240,9 +226,6 @@ public:
 
 	bool InitFormatCtx(const char* filename)
 	{
-		
-		
-
 		if (avformat_open_input(&ctx_, "", 0, 0) < 0)
 		{
 			return false;
@@ -271,11 +254,11 @@ public:
 	}
 
 	bool open_input_;
-	unsigned char *buffer_;
-	AVIOContext *ioctx_;
-	AVFormatContext* ctx_;
-	AVPacket *pkg_;
-	shared_ptr<MemReadStruct> readst_;
+	unsigned char *buffer_ = nullptr;
+	AVIOContext *ioctx_=nullptr;
+	AVFormatContext* ctx_ =nullptr;
+	AVPacket *pkg_ = nullptr;
+	shared_ptr<MemReadStruct> readst_ = nullptr;
 };
 
 class CodecCtx {

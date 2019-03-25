@@ -81,11 +81,7 @@ bool YMediaPlayerImp::SetMedia(const char* path_file)
 	path_file_ = path_file;
 
 	io_mgr_.SetUrl(path_file);
-	//network_.GetNetworkRequest()->SetUrl(path_file);
-	//network_.GetNetwork()->ASyncGet2(network_.GetNetworkRequest(), &network_);
-
-
-
+	
 	decoder_->SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
 

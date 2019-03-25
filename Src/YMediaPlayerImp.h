@@ -45,7 +45,6 @@ public:
 
 	virtual void SetUserHandleVideoFunction(VideoFunc func) override;
 
-
 	virtual void SetBufferFunction(BufferFunc func) override;
 
 protected:
@@ -73,17 +72,11 @@ protected:
 private:
 	void NotifyPlayerStatus(PlayerStatus);
 
-	const char * path_file_;
-
+	std::string path_file_;
 	MediaInfo media_info_;
 	YMediaDecode  *decoder_;
 
-	
-	int64_t cur_pos_ = 0;
-
-	//this is for synchronization
 	StatusFunc status_func_;
-
 	DurFunc dur_func_;
 	CurFunc cur_func_;
 	VideoFunc user_video_func_;
@@ -91,10 +84,7 @@ private:
 
 	BaseAudio * audio_;
 	BaseVideo * video_;
-
 	void *opaque_;
-
-	HttpDownload  network_ ;
 
 	StreamIOMgr io_mgr_;
 };
