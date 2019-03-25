@@ -13,6 +13,31 @@ StreamIOMgr::~StreamIOMgr()
 {
 }
 
+
+void StreamIOMgr::Conduct()
+{
+	switch (stream_type_)
+	{
+	case ST_UNKNOWN:
+	{
+		http_stream_.Conduct();
+	}
+		break;
+	case ST_FILE:
+	{
+
+	}
+		break;
+	case ST_HTTP:
+	{
+		http_stream_.Conduct();
+	}
+		break;
+	default:
+		break;
+	}
+}
+
 void StreamIOMgr::Stop()
 {
 	switch (stream_type_)

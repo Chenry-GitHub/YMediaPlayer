@@ -33,6 +33,11 @@ public:
 			}
 		}	
 	}
+	void Conduct()
+	{
+		is_stop_ = true;
+	}
+
 	void Stop()
 	{
 		GetNetwork()->Stop();
@@ -53,7 +58,11 @@ public:
 		int64_t download_len = GetNetwork()->GetMemorySize();
 		while (download_len < len + cur_pos_ && cur_pos_ + len < file_len || file_len <= 0)
 		{
-			std::this_thread::sleep_for(std::chrono::microseconds(20));
+			if (is_stop_)
+			{
+				return -1;
+			}
+			std::this_thread::sleep_for(std::chrono::microseconds(10));
 
 			download_len = GetNetwork()->GetMemorySize();
 

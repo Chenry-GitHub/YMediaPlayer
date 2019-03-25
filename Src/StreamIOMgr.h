@@ -19,6 +19,8 @@ public:
 	StreamIOMgr();
 	~StreamIOMgr();
 
+	void Conduct();
+
 	void Stop();
 
 	bool SetUrl(const std::string &url);

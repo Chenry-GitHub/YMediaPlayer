@@ -123,6 +123,7 @@ bool YMediaPlayerImp::Stop()
 	decoder_->ConductVideoBlocking();
 	video_->EndPlayThread();
 
+	io_mgr_.Conduct();
 	decoder_->StopDecode();
 	io_mgr_.Stop();
 	return true;
