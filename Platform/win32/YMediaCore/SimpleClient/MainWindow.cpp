@@ -49,18 +49,18 @@ LRESULT MainWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam,
 	}
 	else if (uMsg == EV_CUR)
 	{
-		int* value = (int*)lParam;
-		ctl_progress_slider_->SetCurValue(*value);
+		int value = (int)lParam;
+		ctl_progress_slider_->SetCurValue(value);
 	
 		CDuiString str;
-		str.Format(L"%02d:%02d:%02d/%2d:%02d:%02d", *value / 3600, *value / 60, *value % 60, dur_/ 3600, dur_ / 60, dur_ % 60 );
+		str.Format(L"%02d:%02d:%02d/%2d:%02d:%02d", value / 3600, value / 60, value % 60, dur_/ 3600, dur_ / 60, dur_ % 60 );
 		ctl_progress_info_->SetText(str);
 	}
 	else if (uMsg == EV_DUR)
 	{
-		int* value = (int*)lParam;
-		dur_ = *value;
-		ctl_progress_slider_->SetRange(0,*value);
+		int value = (int)lParam;
+		dur_ = value;
+		ctl_progress_slider_->SetRange(0,value);
 
 		CDuiString str;
 		str.Format(L"%02d:%02d:%02d/%2d:%02d:%02d", 0,0,0, dur_ / 3600, dur_ / 60, dur_ % 60 );
@@ -68,10 +68,9 @@ LRESULT MainWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam,
 	}
 	else if (uMsg == EV_PERCENT)
 	{
-		float* value= (float*)lParam;
-		ctl_progress_slider_->SetBufferPercent(*value);
-
-		
+		float value = (float)lParam/100;
+			
+		ctl_progress_slider_->SetBufferPercent(value);
 	}
 	return __super::HandleCustomMessage(uMsg, wParam, lParam,bHandled);
 }

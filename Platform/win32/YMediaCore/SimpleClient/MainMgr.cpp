@@ -15,11 +15,9 @@ MainMgr::~MainMgr()
 
 void MainMgr::Init()
 {
-#if DEBUG	
 	lg::Initialize();
 	lg::AddConsoleLogger(lg::info);
 	lg::AddConsoleLogger(lg::debug);
-#endif
 
 	main_ctl_.CreateMainWindow();
 	main_ctl_.btn_clicked_paly_media_func_ = std::bind(&MainMgr::OnPlayClicked,this);

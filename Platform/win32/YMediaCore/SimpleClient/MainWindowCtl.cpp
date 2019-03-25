@@ -63,25 +63,32 @@ std::string MainWindowCtl::GetPlayUrl()
 
 void MainWindowCtl::SetVideoImage(void* data, int w, int h)
 {
-	EV_VIDEO_STRUCT st;
-	st.data = data;
-	st.w = w;
-	st.h = h;
+	if (w == 0 || h == 0 || !data)
+		return;
+	static EV_VIDEO_STRUCT *st = nullptr; 
+	if (!st)
+	{
+		st = new EV_VIDEO_STRUCT;
+		st->data = new char[2560*2560*4];
+	}
+	st->w = w;
+	st->h = h;
+	memcpy(st->data, data, w*h*4);
 
-	SendMessage(main_win_->GetHWND(), EV_VIDEO, 0, (LPARAM)&st);
+	PostMessage(main_win_->GetHWND(), EV_VIDEO, 0, (LPARAM)st);
 	//main_win_->ctl_video_display_->SetImage(data, w, h);
 }
 void MainWindowCtl::SetDuration(int dur)
 {
-	SendMessage(main_win_->GetHWND(), EV_DUR, 0, (LPARAM)&dur);
+	PostMessage(main_win_->GetHWND(), EV_DUR, 0, (LPARAM)dur);
 }
 
 void MainWindowCtl::SetCurPos(int cur)
 {
-	SendMessage(main_win_->GetHWND(), EV_CUR, 0, (LPARAM)&cur);
+	PostMessage(main_win_->GetHWND(), EV_CUR, 0, (LPARAM)cur);
 }
 
 void MainWindowCtl::SetBufferPercent(float percent)
 {
-	SendMessage(main_win_->GetHWND(), EV_PERCENT, 0, (LPARAM)&percent);
+	PostMessage(main_win_->GetHWND(), EV_PERCENT, 0, (LPARAM)(percent*100));
 }

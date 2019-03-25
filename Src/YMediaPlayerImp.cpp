@@ -264,12 +264,12 @@ bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
 int YMediaPlayerImp::OnReadMem(char*data, int len)
 {
 	int64_t file_len = network_.GetFileLength();
-	int64_t download_len = network_.GetNetwork()->GetMemLen();
+	int64_t download_len = network_.GetNetwork()->GetMemorySize();
 	while (download_len < len + cur_pos_ && cur_pos_+len <file_len || file_len<=0)
 	{
 		std::this_thread::sleep_for(std::chrono::microseconds(20));
 
-		download_len = network_.GetNetwork()->GetMemLen();
+		download_len = network_.GetNetwork()->GetMemorySize();
 
 
 		file_len = network_.GetFileLength();
@@ -280,7 +280,7 @@ int YMediaPlayerImp::OnReadMem(char*data, int len)
 		return 0;
 	}
 
-	char * data_src = (char *)network_.GetNetwork()->GetMemPtr();
+	char * data_src = (char *)network_.GetNetwork()->GetMemoryData();
 	memcpy_s(data, (int)nbytes, data_src + cur_pos_, (int)nbytes);
 
 	cur_pos_ += nbytes;
@@ -364,7 +364,7 @@ int64_t YMediaPlayerImp::OnSeekMem(int64_t offset, int whence)
 
 
 	//return cur_pos_;
-	int64_t download_len = network_.GetNetwork()->GetMemLen();
+	int64_t download_len = network_.GetNetwork()->GetMemorySize();
 	int64_t total_len = network_.total_;
 	int64_t newPos = -1;
 	switch (whence) {

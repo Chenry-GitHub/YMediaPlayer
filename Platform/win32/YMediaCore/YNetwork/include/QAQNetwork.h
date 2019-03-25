@@ -38,7 +38,6 @@ public:
 	QAQNetwork() {};
 	virtual ~QAQNetwork() {};
 
-
 	virtual QAQNetworkReply* SyncGet(QAQNetworkReq * req, void *user = nullptr, DataCallBack data_cb= nullptr, DataProgress pro_cb= nullptr) = 0;
 
 	virtual QAQNetworkReply* SyncPost(QAQNetworkReq * req, const char*post_data, void *user = nullptr, DataCallBack data_cb = nullptr, DataProgress pro_cb = nullptr) = 0;
@@ -55,9 +54,9 @@ public:
 
 	virtual void CleanInterface() = 0;
 
-	virtual void * GetMemPtr()  = 0;
+	virtual const char * GetMemoryData()  = 0;
 
-	virtual int GetMemLen() = 0;
+	virtual int GetMemorySize() = 0;
 protected:
 
 	QAQNetworkReply* reply_;
