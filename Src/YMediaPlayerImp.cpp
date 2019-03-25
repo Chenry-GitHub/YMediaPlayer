@@ -127,8 +127,8 @@ bool YMediaPlayerImp::Stop()
 	decoder_->ConductVideoBlocking();
 	video_->EndPlayThread();
 
-	network_.GetNetwork()->Stop();
 	decoder_->StopDecode();
+	network_.GetNetwork()->Stop();
 	return true;
 }
 
