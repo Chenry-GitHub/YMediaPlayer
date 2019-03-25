@@ -60,10 +60,10 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	decoder_->SetReadMemFunction(std::bind(&YMediaPlayerImp::OnReadMem, this, std::placeholders::_1, std::placeholders::_2));
 	decoder_->SetSeekMemFunction(std::bind(&YMediaPlayerImp::OnSeekMem, this, std::placeholders::_1, std::placeholders::_2));
 
-	network_.func_ = std::bind([&](float per) {
+	/*network_.func_ = std::bind([&](float per) {
 		if (buffer_func_)
 			buffer_func_(opaque_, per);
-	}, std::placeholders::_1);
+	}, std::placeholders::_1);*/
 }
 
 YMediaPlayerImp::~YMediaPlayerImp()
@@ -80,9 +80,9 @@ bool YMediaPlayerImp::SetMedia(const char* path_file)
 
 	path_file_ = path_file;
 
-
-	network_.GetNetworkRequest()->SetUrl(path_file);
-	network_.GetNetwork()->ASyncGet2(network_.GetNetworkRequest(), &network_);
+	io_mgr_.SetUrl(path_file);
+	//network_.GetNetworkRequest()->SetUrl(path_file);
+	//network_.GetNetwork()->ASyncGet2(network_.GetNetworkRequest(), &network_);
 
 
 
@@ -128,7 +128,7 @@ bool YMediaPlayerImp::Stop()
 	video_->EndPlayThread();
 
 	decoder_->StopDecode();
-	network_.GetNetwork()->Stop();
+	io_mgr_.Stop();
 	return true;
 }
 
@@ -263,124 +263,14 @@ bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
 
 int YMediaPlayerImp::OnReadMem(char*data, int len)
 {
-	int64_t file_len = network_.GetFileLength();
-	int64_t download_len = network_.GetNetwork()->GetMemorySize();
-	while (download_len < len + cur_pos_ && cur_pos_+len <file_len || file_len<=0)
-	{
-		std::this_thread::sleep_for(std::chrono::microseconds(20));
 
-		download_len = network_.GetNetwork()->GetMemorySize();
-
-
-		file_len = network_.GetFileLength();
-	}
-
-	int nbytes = (int64_t)std::min<int>(download_len - cur_pos_, len);
-	if (nbytes <= 0) {
-		return 0;
-	}
-
-	char * data_src = (char *)network_.GetNetwork()->GetMemoryData();
-	memcpy_s(data, (int)nbytes, data_src + cur_pos_, (int)nbytes);
-
-	cur_pos_ += nbytes;
-	return nbytes;
+	return 	io_mgr_.Read(data, len);
 }
 
 
 int64_t YMediaPlayerImp::OnSeekMem(int64_t offset, int whence)
 {
-	//int64_t  newpos = 0;
-	//switch (whence)
-	//{
-	//	case SEEK_SET:
-	//		newpos = offset;
-	//		break;
-	//	case SEEK_CUR:
-	//		newpos = read_fs_.tellg() + offset;
-	//		break;
-	//	case SEEK_END: // 此处可能有问题
-	//	{
-	//		std::streampos  pos = read_fs_.tellg();
-	//		read_fs_.seekg(0, ios::end);
-	//		int64_t totalsize = read_fs_.tellg();
-	//		read_fs_.seekg(pos);
-	//		newpos = totalsize+offset;
-	//		if (offset > 0)
-	//		{
-	//			read_fs_.seekg(totalsize);
-	//			return totalsize;
-	//		}
-	//		else
-	//		{
-	//			read_fs_.seekg(newpos);
-	//			return newpos;
-	//		}
-	//		break;
-	//	}
-	//	case 0x10000://AVSEEK_SIZE
-	//	{
-	//		std::streampos  pos = read_fs_.tellg();
-	//		read_fs_.seekg(0, ios::end);
-	//		int64_t totalsize = read_fs_.tellg();
-	//		read_fs_.seekg(pos);
-	//		return totalsize;
-	//	}
-	//}
-	//read_fs_.seekg(newpos);
-	//return newpos;
-
-	//if (whence == 0x10000)
-	//{
-	//	return -1;
-	//}
-	//printf("OnSeekMem : offset %d ,whence %d\n",offset, whence);
-	//fseek(file_, offset, whence);
-
-	//return ftell(file_);
-
-	//int64_t new_pos = 0;
-
-
-	//switch (whence) {
-
-	//case SEEK_SET:
-	//	new_pos = offset;
-	//	break;
-	//case SEEK_CUR:
-	//	new_pos = cur_pos_ + offset;
-	//	break;
-	//case SEEK_END:
-	//	new_pos = network_->total_ + offset;
-	//	break;
-	//case AVSEEK_SIZE:
-	//	return -1;
-	//default:
-	//	return AVERROR(EINVAL);
-	//}
-
-	//cur_pos_ = FFMIN(new_pos, network_->total_);
-
-
-
-	//return cur_pos_;
-	int64_t download_len = network_.GetNetwork()->GetMemorySize();
-	int64_t total_len = network_.total_;
-	int64_t newPos = -1;
-	switch (whence) {
-	case SEEK_SET: newPos = offset; break;
-	case SEEK_CUR: newPos = cur_pos_ + offset; break;
-	case SEEK_END: newPos = download_len + offset; break;
-	case AVSEEK_SIZE: {
-		// Special whence for determining filesize without any seek.
-		return total_len;
-	} break;
-	}
-	if (newPos < 0 || newPos > download_len) {
-		return -1;
-	}
-	cur_pos_ = newPos;
-	return cur_pos_;
+	return 	io_mgr_.Seek(offset, whence);;
 }
 
 

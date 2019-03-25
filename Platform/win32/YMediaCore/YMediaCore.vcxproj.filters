@@ -32,6 +32,9 @@
     <ClCompile Include="..\..\..\Src\ConstomVideo.cpp">
       <Filter>FileTree</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Src\StreamIOMgr.cpp">
+      <Filter>FileTree</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Src\YMediaDecode.h">
@@ -75,6 +78,9 @@
     </ClInclude>
     <ClInclude Include="YNetwork\HttpDownload.h">
       <Filter>YNetwork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Src\StreamIOMgr.h">
+      <Filter>FileTree</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

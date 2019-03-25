@@ -12,6 +12,7 @@
 #include "YMediaPlayer.h"
 
 #include "..\HttpDownload.h"
+#include "..\StreamIOMgr.h"
 
 
 class YMediaDecode;
@@ -94,4 +95,6 @@ private:
 	void *opaque_;
 
 	HttpDownload  network_ ;
+
+	StreamIOMgr io_mgr_;
 };
