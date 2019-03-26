@@ -98,6 +98,8 @@ public:
 	/*用于Play层调用，出现阻塞seek操作*/
 	bool JudgeBlockAudioSeek();
 	bool JudgeBlockVideoSeek();
+
+	void AddError(ymc::DecodeError error);
 protected:
 
 	/*解码线程*/
@@ -126,6 +128,9 @@ private:
 	void NotifyDecodeStatus(ymc::DecodeError);
 
 	void NotifyMediaInfo(MediaInfo info);
+	
+	
+	int error_ = ymc::ERROR_NO_ERROR;
 
 	std::string path_file_;
 	std::thread decode_thread_;
@@ -197,14 +202,6 @@ public:
 
 		if (readBytes <= 0)
 		{
-			if (readBytes == -2)
-			{
-				read_error_ |= ymc::ERROR_READ_TIME_OUT;
-			}
-			else if (readBytes == -3)
-			{
-				read_error_ |= ymc::ERROR_READ_USER_INTERRUPT;
-			}
 			return;
 		}
 
@@ -245,7 +242,7 @@ public:
 	{
 		if (avformat_open_input(&ctx_, "", 0, 0) < 0) 
 		{
-			read_error_ |= ymc::ERROR_FORMAT;
+			param_->target->AddError(ymc::ERROR_FORMAT);
 			return false;
 		}
 		open_input_ = true;
@@ -270,7 +267,7 @@ public:
 	{
 		av_packet_unref(pkg_);
 	}
-	int read_error_ = ymc::ERROR_NO_ERROR;
+	
 	bool open_input_;
 	unsigned char *buffer_ = nullptr;
 	AVIOContext *ioctx_=nullptr;

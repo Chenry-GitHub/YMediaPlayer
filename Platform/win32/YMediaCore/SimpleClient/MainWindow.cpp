@@ -74,10 +74,16 @@ LRESULT MainWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam,
 	}
 	else if (uMsg == EV_ERROR)
 	{
+		ctl_video_display_->Invalidate();
+		ctl_progress_info_->SetText(L"00:00:00/00:00:00");
+		ctl_progress_slider_->SetBufferPercent(0.0f);
+		ctl_progress_slider_->SetRange(0, 0);
+		ctl_progress_slider_->SetCurValue(0);
+
+
 		if (lParam == 0)
 		{
 			MessageBox(NULL, L"Url Error!", L"cap", NULL);
-			
 		}
 		else if (lParam == 1)
 		{

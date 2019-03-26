@@ -200,6 +200,11 @@ bool YMediaDecode::JudgeBlockVideoSeek()
 	return video_seek_convert_dur_ != SEEK_TIME_DEFAULT;
 }
 
+void YMediaDecode::AddError(ymc::DecodeError error)
+{
+	error_ |= error;
+}
+
 void YMediaDecode::DecodeThread()
 {
 	is_seek_ = false;
@@ -214,15 +219,15 @@ void YMediaDecode::DecodeThread()
 	{
 		printf("InitFormatCtx Error\n");
 		
-		if (format->read_error_ & ymc::ERROR_READ_TIME_OUT)
+		if (error_ & ymc::ERROR_READ_TIME_OUT)
 		{
 			NotifyDecodeStatus(ymc::ERROR_READ_TIME_OUT);
 		}
-		else if (format->read_error_ & ymc::ERROR_READ_USER_INTERRUPT)
+		else if (error_ & ymc::ERROR_READ_USER_INTERRUPT)
 		{
 			NotifyDecodeStatus(ymc::ERROR_READ_USER_INTERRUPT);
 		}
-		else if (format->read_error_ & ymc::ERROR_FORMAT)
+		else if (error_ & ymc::ERROR_FORMAT)
 		{
 			NotifyDecodeStatus(ymc::ERROR_FORMAT);
 		}
@@ -499,6 +504,14 @@ int YMediaDecode::ReadBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
 		if (result > 0)
 		{
 			return result;
+		}
+		else if (result  == -2)
+		{
+			(*op)->target->AddError(ymc::ERROR_READ_TIME_OUT);			
+		}
+		else if (result == -3)
+		{
+			(*op)->target->AddError(ymc::ERROR_READ_USER_INTERRUPT);
 		}
 		return -1;
 	}

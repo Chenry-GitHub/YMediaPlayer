@@ -38,10 +38,10 @@ public:
 	void Stop()
 	{
 		GetNetwork()->Stop();
+		is_stop_ = true;
 		reply_error_ = 0;
 		cur_pos_ = 0;
 		file_len_ = 0;
-		is_stop_ = true;
 	}
 
 	void Start()
