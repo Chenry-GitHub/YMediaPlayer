@@ -54,7 +54,7 @@ protected:
 
 	bool OnSynchronizeVideo();
 
-	void OnDecodeError(DecodeError error);
+	void OnDecodeError(ymc::DecodeError error);
 
 	void OnMediaInfo(MediaInfo info);
 

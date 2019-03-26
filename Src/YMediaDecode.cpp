@@ -99,9 +99,11 @@ void YMediaDecode::SeekPos(double pos)//ffmpeg pts
 	if (!audio_ctx || !video_ctx)
 		return;
 	is_seek_ = true;
+	if(audio_ctx->IsValid())
 	audio_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, audio_ctx->GetStream()->time_base);
+	
+	if(video_ctx->IsValid())
 	video_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, video_ctx->GetStream()->time_base);
-	//video_seek_convert_dur_ = audio_seek_convert_dur_;
 }
 
 AudioPackageInfo YMediaDecode::PopAudioQue()
@@ -120,7 +122,7 @@ AudioPackageInfo YMediaDecode::PopAudioQue()
 	}
 	else
 	{
-		info.error = ERROR_PKG_ERROR;
+		info.error = ymc::ERROR_PKG_ERROR;
 	}
 	av_packet_unref(pkg_info.pkg);
 	av_packet_free(&pkg_info.pkg);
@@ -146,7 +148,7 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 	}
 	else
 	{
-		info.error = ERROR_PKG_ERROR;
+		info.error = ymc::ERROR_PKG_ERROR;
 	}
 	
 	av_packet_unref(pkg_info.pkg);
@@ -158,7 +160,7 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 
 void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
 {
-	if(info && info->error == ERROR_NO_ERROR)
+	if(info && info->error == ymc::ERROR_NO_ERROR)
 		av_free(info->data);
 }
 
@@ -211,7 +213,19 @@ void YMediaDecode::DecodeThread()
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
 		printf("InitFormatCtx Error\n");
-		NotifyDecodeStatus(ERROR_FORMAT);
+		
+		if (format->read_error_ & ymc::ERROR_READ_TIME_OUT)
+		{
+			NotifyDecodeStatus(ymc::ERROR_READ_TIME_OUT);
+		}
+		else if (format->read_error_ & ymc::ERROR_READ_USER_INTERRUPT)
+		{
+			NotifyDecodeStatus(ymc::ERROR_READ_USER_INTERRUPT);
+		}
+		else if (format->read_error_ & ymc::ERROR_FORMAT)
+		{
+			NotifyDecodeStatus(ymc::ERROR_FORMAT);
+		}
 		return;
 	}
 
@@ -230,7 +244,7 @@ void YMediaDecode::DecodeThread()
 	if (!audio_ctx->InitDecoder())
 	{
 		printf("audio_ctx.InitDecoder Error\n");
-		NotifyDecodeStatus(ERROR_FORMAT);
+		NotifyDecodeStatus(ymc::ERROR_FORMAT);
 		return;
 	}
 
@@ -400,7 +414,7 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 		info.data = data;
 		info.size = Audiobuffer_size;
 		info.pts = pts;
-		info.error = ERROR_NO_ERROR;
+		info.error = ymc::ERROR_NO_ERROR;
 		audio_que_.push(info);
 
 		av_free(out_buffer);
@@ -502,7 +516,7 @@ int64_t YMediaDecode::SeekBuff(void *opaque, int64_t offset, int whence)
 	return	-1;
 }
 
-void YMediaDecode::NotifyDecodeStatus(DecodeError error)
+void YMediaDecode::NotifyDecodeStatus(ymc::DecodeError error)
 {
 	if (error_func_)
 		error_func_(error);
@@ -558,7 +572,7 @@ void YMediaDecode::DoConvertVideo(AVPacket *pkg, double cur_clock)
 			info.width = codec_ctx->codec_ctx_->width;
 			info.height = codec_ctx->codec_ctx_->height;
 			info.pts = video_pts;
-			info.error = ERROR_NO_ERROR;
+			info.error = ymc::ERROR_NO_ERROR;
 			video_que_.push(info);
 	}
 }

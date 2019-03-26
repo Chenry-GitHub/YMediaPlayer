@@ -74,9 +74,25 @@ LRESULT MainWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam,
 	}
 	else if (uMsg == EV_ERROR)
 	{
-		MessageBox(NULL,L"EV_ERROR",L"cap",NULL);
+		if (lParam == 0)
+		{
+			MessageBox(NULL, L"Url Error!", L"cap", NULL);
+			
+		}
+		else if (lParam == 1)
+		{
+			MessageBox(NULL, L"Format not supported !", L"cap", NULL);
+		}
+		else if (lParam == 2)
+		{
+			MessageBox(NULL, L"Resource request time out!", L"cap", NULL);
+		}
+		else if (lParam == 3)
+		{
+			MessageBox(NULL, L"User Interrupted!", L"cap", NULL);
+		}
+		
 	}
-
 	return __super::HandleCustomMessage(uMsg, wParam, lParam,bHandled);
 }
 

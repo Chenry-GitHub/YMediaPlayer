@@ -58,7 +58,7 @@ public:
 	void SeekPos(double pos);
 
 	/*Play层调用设置回调错误信息*/
-	void SetErrorFunction(std::function<void(DecodeError)> error_func)
+	void SetErrorFunction(std::function<void(ymc::DecodeError)> error_func)
 	{
 		error_func_ = error_func;
 	}
@@ -114,12 +114,16 @@ protected:
 	void FlushVideoDecodec();
 	void FlushAudioDecodec();
 
+	/*
+	return -2: time out 
+	return -3: user interrupt
+	*/
 	static int ReadBuff(void *opaque, uint8_t *buf, int buf_size);
 
 	static int64_t SeekBuff(void *opaque, int64_t offset, int whence);
 private:
 
-	void NotifyDecodeStatus(DecodeError);
+	void NotifyDecodeStatus(ymc::DecodeError);
 
 	void NotifyMediaInfo(MediaInfo info);
 
@@ -157,7 +161,7 @@ private:
 	std::condition_variable audio_cnd_;
 	std::condition_variable video_cnd_;
 	
-	std::function<void (DecodeError)> error_func_;
+	std::function<void (ymc::DecodeError)> error_func_;
 	std::function<void(MediaInfo)> media_func_;
 	std::function<int(char *data, int len)> read_func_;
 	std::function<int64_t(int64_t offset, int whence)> seek_func_;
@@ -172,29 +176,39 @@ using SeekFunc = int64_t(*) (void *opaque, int64_t offset, int whence);
 
 class FormatCtx {
 public:
-	inline FormatCtx(ReadFunc read_func, SeekFunc seek_func,MemReadStruct read)
+	inline FormatCtx(ReadFunc read_func, SeekFunc seek_func,MemReadStruct param)
 		: open_input_(false)
 	{
-		readst_ = std::make_shared<MemReadStruct>(read);
+		param_ = std::make_shared<MemReadStruct>(param);
 		ctx_ = avformat_alloc_context();
 		pkg_ = av_packet_alloc();
 		av_init_packet(pkg_);
 #define  READ_BUFFER_SIZE 32768 //32KB
 		buffer_ = (unsigned char*)av_malloc(READ_BUFFER_SIZE);
-		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &readst_, read_func, NULL, seek_func);		
+		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &param_, read_func, NULL, seek_func);		
 
 		std::memset(buffer_, 0, READ_BUFFER_SIZE);
 
 		int size = READ_BUFFER_SIZE - AVPROBE_PADDING_SIZE;
 
-		seek_func(&readst_, 0, SEEK_SET);
+		seek_func(&param_, 0, SEEK_SET);
 
-		int readBytes  = read_func(&readst_, buffer_, size);
+		int readBytes  = read_func(&param_, buffer_, size);
 
 		if (readBytes <= 0)
+		{
+			if (readBytes == -2)
+			{
+				read_error_ |= ymc::ERROR_READ_TIME_OUT;
+			}
+			else if (readBytes == -3)
+			{
+				read_error_ |= ymc::ERROR_READ_USER_INTERRUPT;
+			}
 			return;
+		}
 
-		seek_func(&readst_, 0, SEEK_SET);
+		seek_func(&param_, 0, SEEK_SET);
 
 		AVProbeData probe_data;
 		probe_data.filename = "";
@@ -215,9 +229,12 @@ public:
 		
 		if(ioctx_)
 			avio_context_free(&ioctx_);
-
+		
 		if (open_input_)
 		{
+			//buffer_ will be delete by calling avformat_open_input,if guess file failed !
+			if (buffer_)
+				av_free(buffer_);
 			avformat_close_input(&ctx_);
 		}
 		av_packet_free(&pkg_);
@@ -226,8 +243,9 @@ public:
 
 	bool InitFormatCtx(const char* filename)
 	{
-		if (avformat_open_input(&ctx_, "", 0, 0) < 0)
+		if (avformat_open_input(&ctx_, "", 0, 0) < 0) 
 		{
+			read_error_ |= ymc::ERROR_FORMAT;
 			return false;
 		}
 		open_input_ = true;
@@ -252,13 +270,13 @@ public:
 	{
 		av_packet_unref(pkg_);
 	}
-
+	int read_error_ = ymc::ERROR_NO_ERROR;
 	bool open_input_;
 	unsigned char *buffer_ = nullptr;
 	AVIOContext *ioctx_=nullptr;
 	AVFormatContext* ctx_ =nullptr;
 	AVPacket *pkg_ = nullptr;
-	shared_ptr<MemReadStruct> readst_ = nullptr;
+	shared_ptr<MemReadStruct> param_ = nullptr;
 };
 
 class CodecCtx {

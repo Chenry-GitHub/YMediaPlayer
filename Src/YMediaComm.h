@@ -17,16 +17,21 @@ enum AudioPlayMode
 #endif
 };
 
-
-enum PlayerStatus
+/*
+this is for player to use
+*/
+enum class PlayerStatus
 {
 	Stop = 0,
 	Pause,
 	Playing,
 	Buffering,
 	Done,
-	ErrorUnknow,
+	ErrorDecode,
+	ErrorUrl,
 	ErrorFormat,
+	ErrorTimeOut,
+	ErrorUserInterrupt,
 };
 
 
@@ -36,17 +41,22 @@ struct MediaInfo
 
 };
 
-enum YMediaCallBackType
+/*
+	for YMediaDecode.h using
+*/
+namespace ymc //YMediaCore
 {
-	MEDIA_ERROR,
-};
+	enum DecodeError
+	{
+		ERROR_NO_ERROR = 0,
+		ERROR_FORMAT = 0x01,
+		ERROR_PKG_ERROR = 0x02,
+		ERROR_READ_TIME_OUT = 0x04,
+		ERROR_READ_USER_INTERRUPT = 0x08,
+	};
+}
 
-enum DecodeError
-{
-	ERROR_NO_ERROR = 0,
-	ERROR_FORMAT,
-	ERROR_PKG_ERROR,
-};
+
 
 
 struct VideoPackageInfo
@@ -55,7 +65,7 @@ struct VideoPackageInfo
 	int width=0;
 	int height=0;
 	double pts=0.0f;
-	DecodeError error = ERROR_NO_ERROR;
+	ymc::DecodeError error = ymc::ERROR_NO_ERROR;
 };
 
 
@@ -64,7 +74,7 @@ struct AudioPackageInfo
 	void *data = nullptr;
 	int size = 0;
 	double pts=0.0f;
-	DecodeError error = ERROR_NO_ERROR;
+	ymc::DecodeError error = ymc::ERROR_NO_ERROR;
 };
 
 

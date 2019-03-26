@@ -87,12 +87,6 @@ bool StreamIOMgr::SetUrl(const std::string &url)
 				status_func_(PlayerStatus::Buffering);
 			}
 		});
-		http_stream_.error_func_ = std::bind([&]() {
-			if (status_func_)
-			{
-				status_func_(PlayerStatus::ErrorUnknow);
-			}
-		});
 
 		http_stream_.Start();
 		http_stream_.GetNetworkRequest()->SetUrl(url.c_str());
@@ -103,10 +97,14 @@ bool StreamIOMgr::SetUrl(const std::string &url)
 	{			
 		file_stream_= fopen(url.c_str(), "rb");
 		stream_type_ = ST_FILE;
+
+		if (buffer_func_)
+			buffer_func_(1.0f);
 	}
 	else
 	{
 		stream_type_ = ST_UNKNOWN;
+		return false;
 	}
 	return true;
 }
@@ -130,6 +128,13 @@ int StreamIOMgr::Read(char *data, int len)
 		break;
 	default:
 		break;
+	}
+	if (read_size > 0)
+	{
+		if (status_func_)
+		{
+			status_func_(PlayerStatus::Playing);
+		}
 	}
 	return read_size;
 }

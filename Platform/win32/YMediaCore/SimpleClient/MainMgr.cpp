@@ -49,8 +49,43 @@ void MainMgr::Init()
 	});
 	player_->SetStatusFunction([](void *opa,PlayerStatus status){
 		MainMgr * mgr = (MainMgr *)(opa);
-		if(status == PlayerStatus::ErrorUnknow)
-			mgr->main_ctl_.SetPlayerError();
+		switch (status)
+		{
+		case PlayerStatus::Stop:
+			break;
+		case PlayerStatus::Pause:
+			break;
+		case PlayerStatus::Playing:
+			break;
+		case PlayerStatus::Buffering:
+			break;
+		case PlayerStatus::Done:
+			break;
+		case PlayerStatus::ErrorUrl:
+		{
+			mgr->main_ctl_.SetError(0);
+		}
+			break;
+		case PlayerStatus::ErrorFormat:
+		{
+			mgr->main_ctl_.SetError(1);
+		}
+			break;
+		case PlayerStatus::ErrorTimeOut:
+		{
+			mgr->main_ctl_.SetError(2);
+		}
+			break;
+		case PlayerStatus::ErrorUserInterrupt:
+		{
+			mgr->main_ctl_.SetError(3);
+		}
+			break;
+		default:
+			break;
+		}
+
+		
 	});
 }
 

@@ -86,7 +86,11 @@ bool YMediaPlayerImp::SetMedia(const char* path_file)
 
 	path_file_ = path_file;
 
-	io_mgr_.SetUrl(path_file);
+	if (!io_mgr_.SetUrl(path_file))
+	{
+		NotifyPlayerStatus(PlayerStatus::ErrorUrl);
+		return false;
+	}
 	
 	decoder_->SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
@@ -184,7 +188,7 @@ void YMediaPlayerImp::OnAudioDataFree(char *data)
 	{
 		AudioPackageInfo info;
 		info.data = data;
-		info.error = ERROR_NO_ERROR;
+		info.error = ymc::ERROR_NO_ERROR;
 		decoder_->FreeAudioPackageInfo(&info);
 	}
 	
@@ -204,18 +208,22 @@ bool YMediaPlayerImp::OnSynchronizeVideo()
 	return false;
 }
 
-void YMediaPlayerImp::OnDecodeError(DecodeError error)
+void YMediaPlayerImp::OnDecodeError(ymc::DecodeError error)
 {
 	switch (error)
 	{
-	case ERROR_FORMAT:
+	case ymc::ERROR_FORMAT:
 	{
 		NotifyPlayerStatus(PlayerStatus::ErrorFormat);
 	}
 		break;
-	case ERROR_PKG_ERROR:
+	case ymc::ERROR_PKG_ERROR:
 	{
-		NotifyPlayerStatus(PlayerStatus::ErrorUnknow);
+		NotifyPlayerStatus(PlayerStatus::ErrorDecode);
+	}
+	case ymc::ERROR_READ_USER_INTERRUPT:
+	{
+		NotifyPlayerStatus(PlayerStatus::ErrorUserInterrupt);
 	}
 		break;
 	default:
@@ -238,7 +246,7 @@ void YMediaPlayerImp::OnMediaInfo(MediaInfo info)
 bool YMediaPlayerImp::OnAudioDataFunction(char ** data, int *len, double *pts)
 {
 	AudioPackageInfo &&info = decoder_->PopAudioQue();
-	if (info.error == ERROR_NO_ERROR)
+	if (info.error == ymc::ERROR_NO_ERROR)
 	{
 		*data = (char*)info.data;
 		*len = info.size;
@@ -252,7 +260,7 @@ bool YMediaPlayerImp::OnAudioDataFunction(char ** data, int *len, double *pts)
 bool YMediaPlayerImp::OnVideoDataFunction(char ** data, int *width, int *height, double *pts)
 {
 	VideoPackageInfo  && pkg = decoder_->PopVideoQue(video_->GetClock());
-	if (pkg.error == ERROR_NO_ERROR)
+	if (pkg.error == ymc::ERROR_NO_ERROR)
 	{
 		*data = (char*)pkg.data;
 		*width = pkg.width;

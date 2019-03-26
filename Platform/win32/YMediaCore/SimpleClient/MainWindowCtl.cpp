@@ -48,7 +48,9 @@ void MainWindowCtl::CreateMainWindow()
 	main_win_->Create(NULL, _T("YMainWindow"), UI_WNDSTYLE_FRAME, WS_EX_STATICEDGE, 0, 0, 484, 334);
 	main_win_->CenterWindow();
 
-	main_win_->ctl_edit_url_->SetText(L"http://hc.yinyuetai.com/uploads/videos/common/02D30168547A579F07E92D27B0DA34D0.mp4?sc=068dd881b47be705");
+	//http://hc.yinyuetai.com/uploads/video
+	//http://hc.yinyuetai.com/uploads/videos/common/02D30168547A579F07E92D27B0DA34D0.mp4?sc=068dd881b47be705
+	main_win_->ctl_edit_url_->SetText(L"http://hc.yinyuetai.com/uploads/video");
 }
 
 void MainWindowCtl::Close()
@@ -92,7 +94,7 @@ void MainWindowCtl::SetBufferPercent(float percent)
 	PostMessage(main_win_->GetHWND(), EV_PERCENT, 0, (LPARAM)(percent*100));
 }
 
-void MainWindowCtl::SetPlayerError()
+void MainWindowCtl::SetError(int type)
 {
-	PostMessage(main_win_->GetHWND(), EV_ERROR, 0, (LPARAM)0);
+	PostMessage(main_win_->GetHWND(), EV_ERROR, 0, (LPARAM)type);
 }

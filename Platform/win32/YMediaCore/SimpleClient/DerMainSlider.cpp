@@ -45,7 +45,7 @@ void DerMainSlider::DoEvent(TEventUI& event)
 		float percent = (float)(event.ptMouse.x-GetX()) / GetWidth();
 		if (clicked_func_)
 			clicked_func_(percent);
-		SetCurValue((max_value_-min_value_)*percent);
+		//SetCurValue((max_value_-min_value_)*percent);
 	}
 
 	__super::DoEvent(event);

@@ -16,6 +16,7 @@ public:
 	}
 	virtual bool OnAnalysis(const std::string &data) override
 	{
+		file_len_ = data.size();
 		if (data.size() == 0)
 			return false;
 		return true;
@@ -26,11 +27,7 @@ public:
 	{
 		if (!success)
 		{
-			error_ = 1;
-			if (error_func_)
-			{
-				error_func_(success);
-			}
+			reply_error_ = 1;
 		}	
 	}
 	void Conduct()
@@ -41,7 +38,7 @@ public:
 	void Stop()
 	{
 		GetNetwork()->Stop();
-		error_ = 0;
+		reply_error_ = 0;
 		cur_pos_ = 0;
 		file_len_ = 0;
 		is_stop_ = true;
@@ -54,28 +51,32 @@ public:
 
 	int Read(char *data, int len)
 	{
-		int64_t file_len = GetFileLength();
 		int64_t download_len = GetNetwork()->GetMemorySize();
-		while (download_len < len + cur_pos_ && cur_pos_ + len < file_len || file_len <= 0)
+		while (download_len < len + cur_pos_ && cur_pos_ + len < file_len_ || file_len_ <= 0)
 		{
+			if (file_len_ == download_len && file_len_ > 0)
+				break;
+
 			if (status_buffering_func_)
 				status_buffering_func_();
-
+			
 			if (is_stop_)
 			{
-				return -1;
+				return -3; //RE_USER_INTERRUPT , user interrupt
+			}
+			else if (reply_error_)
+			{
+				return -2; //RE_TIMEOUT , time out
 			}
 			std::this_thread::sleep_for(std::chrono::microseconds(10));
 
 			download_len = GetNetwork()->GetMemorySize();
 
-
-			file_len = GetFileLength();
 		}
 
 		int nbytes = (int64_t)std::min<int>(download_len - cur_pos_, len);
 		if (nbytes <= 0) {
-			return 0;
+			return -1;
 		}
 
 		char * data_src = (char *)GetNetwork()->GetMemoryData();
@@ -107,11 +108,11 @@ public:
 
 	std::atomic_bool is_stop_;
 	int cur_pos_ = 0;
-	int error_ = 0;
-	int file_len_=0;
+	int reply_error_ = 0;
+	std::atomic_int file_len_=0;
 	std::function<void (float)> buffer_func_=nullptr;
 	std::function<void ()> status_buffering_func_ = nullptr;
-	std::function<void (bool)> error_func_=nullptr;
+	//std::function<void (bool)> error_func_=nullptr;
 	
 	virtual void OnDataProgress(double total, double now) override
 	{

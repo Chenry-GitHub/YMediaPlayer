@@ -25,7 +25,8 @@ public:
 	void SetDuration(int dur);
 	void SetCurPos(int cur);
 	void SetBufferPercent(float percent);
-	void SetPlayerError();
+
+	void SetError(int type);
 	//
 
 	std::function<void()> btn_clicked_paly_media_func_=nullptr;
