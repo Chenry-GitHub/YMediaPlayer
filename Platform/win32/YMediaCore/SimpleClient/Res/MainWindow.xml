@@ -6,7 +6,7 @@
 <VerticalLayout name="mainVert" bkcolor ="0xFFFFFFFF" bordersize="1" bordercolor="#FFE4E4E4">
 	<!--roundcorner="5,5" layeredimage="" layeredopacity="240" bkimage ="MainWindowRes/client_bg_update.png"-->
   <HorizontalLayout name ="mainLayout" height="40" inset="10,10,10,10" childpadding="10">
-  <Label name="lab_cap" text="YMediaPlayer-Demo(QQ:842420717)" nativetextcolor="#FF000000"/>
+  <Label name="lab_cap" text="Http-Stream-Player-Demo(暂支持文件和Http)(QQ:384919904)" nativetextcolor="#FF000000"/>
   <Button name="minbtn" width="14" height = "14"
   normalimage="MainWindowRes/client_icon_minimum.png"
   hotimage="MainWindowRes/client_icon_minimum_hover.png">

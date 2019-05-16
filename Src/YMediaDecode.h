@@ -42,8 +42,20 @@ class VideoConvertManger;
 class YMediaDecode
 {
 public:
+	class Delegate
+	{
+	public:
+		virtual void onDecodeError(ymc::DecodeError) = 0;
+		virtual void onMediaInfo(MediaInfo) = 0;
+		virtual int onRead(char *data, int len)=0;
+		virtual int64_t onSeek(int64_t offset, int whence) = 0;
+	};
 	YMediaDecode();
 	~YMediaDecode();
+
+	void setDelegate(YMediaDecode::Delegate*);
+
+	YMediaDecode::Delegate* getDelegate();
 
 	/*设置媒体信息*/
 	bool SetMedia(const std::string & path_file,int sample_rate,int channel);
@@ -57,28 +69,6 @@ public:
 	/*Play层调用，设置seek位置*/
 	void SeekPos(double pos);
 
-	/*Play层调用设置回调错误信息*/
-	void SetErrorFunction(std::function<void(ymc::DecodeError)> error_func)
-	{
-		error_func_ = error_func;
-	}
-
-	/*Play层调用设置回调信息*/
-	void SetMediaFunction(std::function<void(MediaInfo)> func)
-	{
-		media_func_ = func;
-	}
-
-	/*Play的Read回调方法*/
-	void SetReadMemFunction(std::function<int (char *data, int len)> func)
-	{
-		read_func_ = func;
-	}
-
-	void SetSeekMemFunction(std::function<int64_t(int64_t offset, int whence)> func)
-	{
-		seek_func_ = func;
-	}
 
 	/*Play层调用，释放播放后的包体*/
 	void FreeAudioPackageInfo(AudioPackageInfo*);
@@ -165,47 +155,41 @@ private:
 	std::mutex video_cnd_lock_;
 	std::condition_variable audio_cnd_;
 	std::condition_variable video_cnd_;
-	
-	std::function<void (ymc::DecodeError)> error_func_;
-	std::function<void(MediaInfo)> media_func_;
-	std::function<int(char *data, int len)> read_func_;
-	std::function<int64_t(int64_t offset, int whence)> seek_func_;
 
+	YMediaDecode::Delegate * delegate_ = nullptr;
 };
 
-struct MemReadStruct {
-	YMediaDecode *target;
-};
+
 using ReadFunc = int(*) (void *opaque, uint8_t *buf, int buf_size);
 using SeekFunc = int64_t(*) (void *opaque, int64_t offset, int whence);
 
 class FormatCtx {
 public:
-	inline FormatCtx(ReadFunc read_func, SeekFunc seek_func,MemReadStruct param)
+	inline FormatCtx(ReadFunc read_func, SeekFunc seek_func, YMediaDecode* param)
 		: open_input_(false)
+		, deocdec_(param)
 	{
-		param_ = std::make_shared<MemReadStruct>(param);
 		ctx_ = avformat_alloc_context();
 		pkg_ = av_packet_alloc();
 		av_init_packet(pkg_);
 #define  READ_BUFFER_SIZE 32768 //32KB
 		buffer_ = (unsigned char*)av_malloc(READ_BUFFER_SIZE);
-		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, &param_, read_func, NULL, seek_func);		
+		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, param, read_func, NULL, seek_func);
 
 		std::memset(buffer_, 0, READ_BUFFER_SIZE);
 
 		int size = READ_BUFFER_SIZE - AVPROBE_PADDING_SIZE;
 
-		seek_func(&param_, 0, SEEK_SET);
+		seek_func(param, 0, SEEK_SET);
 
-		int readBytes  = read_func(&param_, buffer_, size);
+		int readBytes  = read_func(param, buffer_, size);
 
 		if (readBytes <= 0)
 		{
 			return;
 		}
 
-		seek_func(&param_, 0, SEEK_SET);
+		seek_func(param, 0, SEEK_SET);
 
 		AVProbeData probe_data;
 		probe_data.filename = "";
@@ -242,7 +226,7 @@ public:
 	{
 		if (avformat_open_input(&ctx_, "", 0, 0) < 0) 
 		{
-			param_->target->AddError(ymc::ERROR_FORMAT);
+			deocdec_->AddError(ymc::ERROR_FORMAT);
 			return false;
 		}
 		open_input_ = true;
@@ -273,7 +257,7 @@ public:
 	AVIOContext *ioctx_=nullptr;
 	AVFormatContext* ctx_ =nullptr;
 	AVPacket *pkg_ = nullptr;
-	shared_ptr<MemReadStruct> param_ = nullptr;
+	YMediaDecode* deocdec_=nullptr;
 };
 
 class CodecCtx {

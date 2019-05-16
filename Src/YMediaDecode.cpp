@@ -18,6 +18,16 @@ YMediaDecode::~YMediaDecode()
 
 }
 
+void YMediaDecode::setDelegate(YMediaDecode::Delegate*dele)
+{
+	delegate_ = dele;
+}
+
+YMediaDecode::Delegate* YMediaDecode::getDelegate()
+{
+	return delegate_;
+}
+
 bool YMediaDecode::SetMedia(const std::string & path_file, int sample_rate, int channel)
 {
 	StopDecode();
@@ -213,7 +223,7 @@ void YMediaDecode::DecodeThread()
 	is_manual_stop_ = false;
 	uint8_t* pic_buff=nullptr;
 
-	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(YMediaDecode::ReadBuff, YMediaDecode::SeekBuff, MemReadStruct{this});
+	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(YMediaDecode::ReadBuff, YMediaDecode::SeekBuff, this);
 	format_ctx_ = format;
 	if (!format->InitFormatCtx(path_file_.c_str()))
 	{
@@ -497,21 +507,21 @@ void YMediaDecode::FlushAudioDecodec()
 
 int YMediaDecode::ReadBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
 {
-	std::shared_ptr<MemReadStruct>* op = (std::shared_ptr<MemReadStruct>*)opaque;
-	if (op  && *op)
+	YMediaDecode* op = (YMediaDecode*)opaque;
+	if (op)
 	{
-		int64_t result = (*op)->target->read_func_((char*)read_buf, read_buf_size);
+		int64_t result = op->getDelegate()->onRead((char*)read_buf, read_buf_size);
 		if (result > 0)
 		{
 			return result;
 		}
 		else if (result  == -2)
 		{
-			(*op)->target->AddError(ymc::ERROR_READ_TIME_OUT);			
+			op->AddError(ymc::ERROR_READ_TIME_OUT);
 		}
 		else if (result == -3)
 		{
-			(*op)->target->AddError(ymc::ERROR_READ_USER_INTERRUPT);
+			op->AddError(ymc::ERROR_READ_USER_INTERRUPT);
 		}
 		return -1;
 	}
@@ -520,10 +530,10 @@ int YMediaDecode::ReadBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
 
 int64_t YMediaDecode::SeekBuff(void *opaque, int64_t offset, int whence)
 {
-	std::shared_ptr<MemReadStruct>* op = (std::shared_ptr<MemReadStruct>*)opaque;
-	if (op  && *op)
+	YMediaDecode* op = (YMediaDecode*)opaque;
+	if (op)
 	{
-		int64_t result = (*op)->target->seek_func_(offset, whence);
+		int64_t result = op->getDelegate()->onSeek(offset, whence);
 		return result;
 	}
 	return	-1;
@@ -531,14 +541,14 @@ int64_t YMediaDecode::SeekBuff(void *opaque, int64_t offset, int whence)
 
 void YMediaDecode::NotifyDecodeStatus(ymc::DecodeError error)
 {
-	if (error_func_)
-		error_func_(error);
+	if (delegate_)
+		delegate_->onDecodeError(error);
 }
 
 void YMediaDecode::NotifyMediaInfo(MediaInfo info)
 {
-	if(media_func_)
-		media_func_(info);
+	if(delegate_)
+		delegate_->onMediaInfo(info);
 }
 
 void YMediaDecode::DoConvertVideo(AVPacket *pkg, double cur_clock)

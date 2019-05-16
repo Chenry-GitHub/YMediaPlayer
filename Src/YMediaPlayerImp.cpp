@@ -54,11 +54,8 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	video_->SetBlockSeekFunction(std::bind(&YMediaPlayerImp::OnVideoSeekFunction, this));
 	video_->SetUserDisplayFunction(std::bind(&YMediaPlayerImp::OnUserDisplayFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-	decoder_ = new YMediaDecode();
-	decoder_->SetErrorFunction(std::bind(&YMediaPlayerImp::OnDecodeError,this, std::placeholders::_1));
-	decoder_->SetMediaFunction(std::bind(&YMediaPlayerImp::OnMediaInfo, this, std::placeholders::_1));
-	decoder_->SetReadMemFunction(std::bind(&YMediaPlayerImp::OnReadMem, this, std::placeholders::_1, std::placeholders::_2));
-	decoder_->SetSeekMemFunction(std::bind(&YMediaPlayerImp::OnSeekMem, this, std::placeholders::_1, std::placeholders::_2));
+	decoder_.setDelegate(this);
+
 
 	io_mgr_.buffer_func_ = std::bind([&](float per) {
 		if (buffer_func_)
@@ -92,7 +89,7 @@ bool YMediaPlayerImp::SetMedia(const char* path_file)
 		return false;
 	}
 	
-	decoder_->SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
+	decoder_.SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
 
 	audio_->BeginPlayThread();
@@ -126,15 +123,15 @@ bool YMediaPlayerImp::IsPlaying()
 bool YMediaPlayerImp::Stop()
 {
 	audio_->Stop();
-	decoder_->ConductAudioBlocking();
+	decoder_.ConductAudioBlocking();
 	audio_->EndPlayThread();
 
 	video_->Stop();
-	decoder_->ConductVideoBlocking();
+	decoder_.ConductVideoBlocking();
 	video_->EndPlayThread();
 
 	io_mgr_.Conduct();
-	decoder_->StopDecode();
+	decoder_.StopDecode();
 	io_mgr_.Stop();
 	return true;
 }
@@ -143,7 +140,7 @@ bool YMediaPlayerImp::Stop()
 
 void YMediaPlayerImp::Seek(float pos)
 {
-	decoder_->SeekPos(media_info_.dur*pos);
+	decoder_.SeekPos(media_info_.dur*pos);
 	audio_->Seek(pos);
 	video_->Seek(pos);
 }
@@ -182,6 +179,50 @@ void YMediaPlayerImp::SetStatusFunction(StatusFunc func)
 	status_func_ = func;
 }
 
+void YMediaPlayerImp::onDecodeError(ymc::DecodeError error)
+{
+	switch (error)
+	{
+	case ymc::ERROR_FORMAT:
+	{
+		NotifyPlayerStatus(PlayerStatus::ErrorFormat);
+	}
+	break;
+	case ymc::ERROR_PKG_ERROR:
+	{
+		NotifyPlayerStatus(PlayerStatus::ErrorDecode);
+	}
+	case ymc::ERROR_READ_USER_INTERRUPT:
+	{
+		NotifyPlayerStatus(PlayerStatus::ErrorUserInterrupt);
+	}
+	break;
+	default:
+		break;
+	}
+}
+
+void YMediaPlayerImp::onMediaInfo(MediaInfo info)
+{
+	media_info_ = info;
+	audio_->SetDuration(info.dur);
+	video_->SetDuration(info.dur);
+
+	if (dur_func_)
+		dur_func_(opaque_, (int)info.dur);
+	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
+}
+
+int YMediaPlayerImp::onRead(char *data, int len)
+{
+	return 	io_mgr_.Read(data, len);
+}
+
+int64_t YMediaPlayerImp::onSeek(int64_t offset, int whence)
+{
+	return 	io_mgr_.Seek(offset, whence);
+}
+
 void YMediaPlayerImp::OnAudioDataFree(char *data)
 {
 	if (data)
@@ -189,7 +230,7 @@ void YMediaPlayerImp::OnAudioDataFree(char *data)
 		AudioPackageInfo info;
 		info.data = data;
 		info.error = ymc::ERROR_NO_ERROR;
-		decoder_->FreeAudioPackageInfo(&info);
+		decoder_.FreeAudioPackageInfo(&info);
 	}
 	
 }
@@ -208,44 +249,12 @@ bool YMediaPlayerImp::OnSynchronizeVideo()
 	return false;
 }
 
-void YMediaPlayerImp::OnDecodeError(ymc::DecodeError error)
-{
-	switch (error)
-	{
-	case ymc::ERROR_FORMAT:
-	{
-		NotifyPlayerStatus(PlayerStatus::ErrorFormat);
-	}
-		break;
-	case ymc::ERROR_PKG_ERROR:
-	{
-		NotifyPlayerStatus(PlayerStatus::ErrorDecode);
-	}
-	case ymc::ERROR_READ_USER_INTERRUPT:
-	{
-		NotifyPlayerStatus(PlayerStatus::ErrorUserInterrupt);
-	}
-		break;
-	default:
-		break;
-	}
-	
-}
 
-void YMediaPlayerImp::OnMediaInfo(MediaInfo info)
-{
-	media_info_ = info;
-	audio_->SetDuration(info.dur);
-	video_->SetDuration(info.dur);
-	
-	if(dur_func_)
-		dur_func_(opaque_ , (int)info.dur);
-	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
-}
+
 
 bool YMediaPlayerImp::OnAudioDataFunction(char ** data, int *len, double *pts)
 {
-	AudioPackageInfo &&info = decoder_->PopAudioQue();
+	AudioPackageInfo &&info = decoder_.PopAudioQue();
 	if (info.error == ymc::ERROR_NO_ERROR)
 	{
 		*data = (char*)info.data;
@@ -259,7 +268,7 @@ bool YMediaPlayerImp::OnAudioDataFunction(char ** data, int *len, double *pts)
 
 bool YMediaPlayerImp::OnVideoDataFunction(char ** data, int *width, int *height, double *pts)
 {
-	VideoPackageInfo  && pkg = decoder_->PopVideoQue(video_->GetClock());
+	VideoPackageInfo  && pkg = decoder_.PopVideoQue(video_->GetClock());
 	if (pkg.error == ymc::ERROR_NO_ERROR)
 	{
 		*data = (char*)pkg.data;
@@ -273,12 +282,12 @@ bool YMediaPlayerImp::OnVideoDataFunction(char ** data, int *width, int *height,
 
 bool YMediaPlayerImp::OnAudioSeekFunction()
 {
-	return decoder_->JudgeBlockAudioSeek();
+	return decoder_.JudgeBlockAudioSeek();
 }
 
 bool YMediaPlayerImp::OnVideoSeekFunction()
 {
-	return decoder_->JudgeBlockVideoSeek();
+	return decoder_.JudgeBlockVideoSeek();
 }
 
 bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
@@ -290,18 +299,6 @@ bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
 		return true;
 	}
 	return false;
-}
-
-int YMediaPlayerImp::OnReadMem(char*data, int len)
-{
-
-	return 	io_mgr_.Read(data, len);
-}
-
-
-int64_t YMediaPlayerImp::OnSeekMem(int64_t offset, int whence)
-{
-	return 	io_mgr_.Seek(offset, whence);;
 }
 
 

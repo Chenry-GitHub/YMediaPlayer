@@ -49,7 +49,7 @@ void MainWindowCtl::CreateMainWindow()
 	main_win_->CenterWindow();
 
 	//http://hc.yinyuetai.com/uploads/video
-	main_win_->ctl_edit_url_->SetText(L"http://hc.yinyuetai.com/uploads/videos/common/EBC5016927B4AB747E331EF67FC47F52.mp4?sc=ae6eda25623fe77a");
+	main_win_->ctl_edit_url_->SetText(L"http://hc.yinyuetai.com/uploads/videos/common/B75F016ABA0C8B451DD41000A9425354.mp4?sc=e73ae1a1a7496ca5");
 }
 
 void MainWindowCtl::Close()

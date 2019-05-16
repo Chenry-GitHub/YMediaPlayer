@@ -10,15 +10,15 @@
 
 
 #include "YMediaPlayer.h"
-
-#include "..\HttpDownload.h"
 #include "..\StreamIOMgr.h"
+#include "YMediaDecode.h"
 
 
 class YMediaDecode;
 class BaseAudio;
 class BaseVideo;
 class YMediaPlayerImp:public YMediaPlayer
+					,public YMediaDecode::Delegate
 {
 public:
 	YMediaPlayerImp(AudioPlayMode audio_mode,VideoPlayMode video_mode);
@@ -49,14 +49,22 @@ public:
 
 	virtual void SetStatusFunction(StatusFunc func) override;
 
+//
+	virtual void onDecodeError(ymc::DecodeError) override;
+
+
+	virtual void onMediaInfo(MediaInfo) override;
+
+
+	virtual int onRead(char *data, int len) override;
+
+
+	virtual int64_t onSeek(int64_t offset, int whence) override;
+//
 protected:
 	void OnAudioDataFree(char *data);
 
 	bool OnSynchronizeVideo();
-
-	void OnDecodeError(ymc::DecodeError error);
-
-	void OnMediaInfo(MediaInfo info);
 
 	bool OnAudioDataFunction(char ** data, int *len,double *pts);
 
@@ -68,15 +76,12 @@ protected:
 
 	bool OnUserDisplayFunction(void *data,int width,int height);
 
-	int OnReadMem(char*data,int len);
-
-	int64_t OnSeekMem(int64_t offset, int whence);
 private:
 	void NotifyPlayerStatus(PlayerStatus);
 
 	std::string path_file_;
 	MediaInfo media_info_;
-	YMediaDecode  *decoder_;
+	YMediaDecode  decoder_;
 
 	StatusFunc status_func_;
 	DurFunc dur_func_;

@@ -94,8 +94,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libavcodecd.lib;libavdeviced.lib;libavfilterd.lib;libavformatd.lib;libavutild.lib;libpostprocd.lib;libswresampled.lib;libswscaled.lib;YNetwork.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>YNetwork/bin/$(Configuration);../../../ffmpeg-4.1-win32-static/lib/x86</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libavcodecd.lib;libavdeviced.lib;libavfilterd.lib;libavformatd.lib;libavutild.lib;libpostprocd.lib;libswresampled.lib;libswscaled.lib;QAQNetwork.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../../src/win32/YNetwork/lib/$(Configuration);../../../ffmpeg-4.1-win32-static/lib/x86</AdditionalLibraryDirectories>
       <AdditionalOptions>/SAFESEH:no %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
@@ -129,8 +129,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libavcodec.lib;libavdevice.lib;libavfilter.lib;libavformat.lib;libavutil.lib;libpostproc.lib;libswresample.lib;libswscale.lib;YNetwork.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>YNetwork/bin/$(Configuration);../../../ffmpeg-4.1-win32-static/lib/x86</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libavcodec.lib;libavdevice.lib;libavfilter.lib;libavformat.lib;libavutil.lib;libpostproc.lib;libswresample.lib;libswscale.lib;QAQNetwork.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../../src/win32/YNetwork/lib/$(Configuration);../../../ffmpeg-4.1-win32-static/lib/x86</AdditionalLibraryDirectories>
       <AdditionalOptions>/SAFESEH:no %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>

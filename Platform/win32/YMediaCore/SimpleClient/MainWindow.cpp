@@ -95,7 +95,7 @@ LRESULT MainWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam,
 		}
 		else if (lParam == 3)
 		{
-			MessageBox(NULL, L"User Interrupted!", L"cap", NULL);
+			//MessageBox(NULL, L"User Interrupted!", L"cap", NULL);
 		}
 		
 	}

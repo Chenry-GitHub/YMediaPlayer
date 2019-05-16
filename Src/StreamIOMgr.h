@@ -5,8 +5,8 @@
 #include <functional>
 #include <fstream>
 #include <atomic>
-#include "..\HttpDownload.h"
 #include "YMediaComm.h"
+#include "win32/YNetwork/HttpsStream.h"
 
 enum StreamType
 {
@@ -39,7 +39,7 @@ protected:
 	//file stream
 	FILE* file_stream_=nullptr;
 	//network HTTP
-	HttpDownload http_stream_;
+	HttpStream http_stream_;
 	StreamType stream_type_;
 
 

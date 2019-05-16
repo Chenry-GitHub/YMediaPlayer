@@ -89,8 +89,8 @@ bool StreamIOMgr::SetUrl(const std::string &url)
 		});
 
 		http_stream_.Start();
-		http_stream_.GetNetworkRequest()->SetUrl(url.c_str());
-		http_stream_.GetNetwork()->ASyncGet2(http_stream_.GetNetworkRequest(), &http_stream_);
+		http_stream_.getNetwork()->getRequest()->setUrl(url.c_str());
+		http_stream_.getNetwork()->asyncGet();
 		stream_type_ = ST_HTTP;
 	}
 	else if (_access(url.c_str(),0) == 0)
