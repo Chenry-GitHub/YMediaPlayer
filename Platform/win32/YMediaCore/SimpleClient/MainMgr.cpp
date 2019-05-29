@@ -27,66 +27,9 @@ void MainMgr::Init()
 	main_ctl_.SetFinalFunction(std::bind(&MainMgr::OnMainWindowFinalMSG, this));
 	main_ctl_.SetClickedSliderFunction(std::bind(&MainMgr::OnSliderClicked, this, std::placeholders::_1));
 
-	player_ = CreatePlayer(MODE_WIN_WAV, MODE_USER, this);
-
-	player_->SetDurationChangedFunction([](void*opa, int dur) {
-		MainMgr * mgr = (MainMgr *)(opa);
-		mgr->main_ctl_.SetDuration(dur);
-	});
-	player_->SetCurrentChangedFucnton([](void*opa, int cur) {
-		MainMgr * mgr = (MainMgr *)(opa);
-		mgr->main_ctl_.SetCurPos(cur);
-	});
-
-	player_->SetUserHandleVideoFunction([](void *opa, void*data, int width, int height) {
-		MainMgr * mgr = (MainMgr *)(opa);
-		mgr->main_ctl_.SetVideoImage(data, width, height);
-	});
-
-	player_->SetBufferFunction([](void *opa, float percent) {
-		MainMgr * mgr = (MainMgr *)(opa);
-		mgr->main_ctl_.SetBufferPercent(percent);
-	});
-	player_->SetStatusFunction([](void *opa,PlayerStatus status){
-		MainMgr * mgr = (MainMgr *)(opa);
-		switch (status)
-		{
-		case PlayerStatus::Stop:
-			break;
-		case PlayerStatus::Pause:
-			break;
-		case PlayerStatus::Playing:
-			break;
-		case PlayerStatus::Buffering:
-			break;
-		case PlayerStatus::Done:
-			break;
-		case PlayerStatus::ErrorUrl:
-		{
-			mgr->main_ctl_.SetError(0);
-		}
-			break;
-		case PlayerStatus::ErrorFormat:
-		{
-			mgr->main_ctl_.SetError(1);
-		}
-			break;
-		case PlayerStatus::ErrorTimeOut:
-		{
-			mgr->main_ctl_.SetError(2);
-		}
-			break;
-		case PlayerStatus::ErrorUserInterrupt:
-		{
-			mgr->main_ctl_.SetError(3);
-		}
-			break;
-		default:
-			break;
-		}
-
-		
-	});
+	player_ = CreatePlayer(MODE_WIN_WAV, MODE_USER);
+	player_->setDelegate(this);
+	player_->setOpaque(this);
 }
 
 void MainMgr::UnInit()
@@ -95,13 +38,77 @@ void MainMgr::UnInit()
 	DeletePlayer(player_);
 }
 
+void MainMgr::onDurationChanged(YMediaPlayer* player, int duration)
+{
+	MainMgr * mgr = (MainMgr *)(player->getOpaque());
+	mgr->main_ctl_.SetDuration(duration);
+}
+
+void MainMgr::onCurrentChanged(YMediaPlayer*player, int pos)
+{
+	MainMgr * mgr = (MainMgr *)(player->getOpaque());
+	mgr->main_ctl_.SetCurPos(pos);
+}
+
+void MainMgr::onStatusChanged(YMediaPlayer*player, PlayerStatus status)
+{
+	MainMgr * mgr = (MainMgr *)(player->getOpaque());
+	switch (status)
+	{
+	case PlayerStatus::Stop:
+		break;
+	case PlayerStatus::Pause:
+		break;
+	case PlayerStatus::Playing:
+		break;
+	case PlayerStatus::Buffering:
+		break;
+	case PlayerStatus::Done:
+		break;
+	case PlayerStatus::ErrorUrl:
+	{
+		mgr->main_ctl_.SetError(0);
+	}
+	break;
+	case PlayerStatus::ErrorFormat:
+	{
+		mgr->main_ctl_.SetError(1);
+	}
+	break;
+	case PlayerStatus::ErrorTimeOut:
+	{
+		mgr->main_ctl_.SetError(2);
+	}
+	break;
+	case PlayerStatus::ErrorUserInterrupt:
+	{
+		mgr->main_ctl_.SetError(3);
+	}
+	break;
+	default:
+		break;
+	}
+}
+
+void MainMgr::onVideoData(YMediaPlayer*player, void *data, int width, int height)
+{
+	MainMgr * mgr = (MainMgr *)(player->getOpaque());
+	mgr->main_ctl_.SetVideoImage(data, width, height);
+}
+
+void MainMgr::onNetworkBuffer(YMediaPlayer*player, float percent)
+{
+	MainMgr * mgr = (MainMgr *)(player->getOpaque());
+	mgr->main_ctl_.SetBufferPercent(percent);
+}
+
 void MainMgr::OnPlayClicked()
 {
 	std::string url = main_ctl_.GetPlayUrl();
 	//MessageBoxA(NULL, url.c_str(), "cap", 0);
 	printf("test");
-	player_->SetMedia(url.c_str());
-	player_->Play();
+	player_->setMedia(url.c_str());
+	player_->play();
 }
 
 bool MainMgr::OnClickedClose()
@@ -118,5 +125,5 @@ bool MainMgr::OnMainWindowFinalMSG()
 
 void MainMgr::OnSliderClicked(float percent)
 {
-	player_->Seek(percent);
+	player_->seek(percent);
 }

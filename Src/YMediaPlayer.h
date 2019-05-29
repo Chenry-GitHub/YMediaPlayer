@@ -5,42 +5,44 @@
 #else
 #define YMEDIA_DECL __declspec(dllimport)
 #endif
-using DurFunc = void(*)(void *opaque,int);
-using CurFunc = void(*)(void *opaque,int);
-using StatusFunc = void(*)(void *opaque,PlayerStatus);
-using VideoFunc = void(*)(void *opaque, void *data,int width,int height);
-using BufferFunc = void(*)(void *opaque, float percent);
+
 
 class YMediaPlayer
 {
 public:
+	class Delegate
+	{
+	public:
+		virtual void onDurationChanged(YMediaPlayer* , int duration) = 0;
+		virtual void onCurrentChanged(YMediaPlayer*, int changed) = 0;
+		virtual void onStatusChanged(YMediaPlayer*, PlayerStatus status) = 0;
+		virtual void onVideoData(YMediaPlayer*,void *data,int width,int height) = 0;
+		virtual void onNetworkBuffer(YMediaPlayer* ,float percent)=0;
+	};
+
 	virtual ~YMediaPlayer() {};
 
-	virtual bool SetMedia(const char* path_file) =0;
+	virtual void setDelegate(YMediaPlayer::Delegate* dele) = 0 ;
 
-	virtual bool Play() = 0;
+	virtual YMediaPlayer::Delegate* getDelegate() = 0; 
 
-	virtual bool Pause() = 0;
+	virtual bool setMedia(const char* path_file) =0;
 
-	virtual bool IsPlaying() = 0;
+	virtual bool play() = 0;
 
-	virtual bool Stop() = 0;
+	virtual bool pause() = 0;
 
-	virtual void Seek(float pos) = 0;
+	virtual bool isPlaying() = 0;
 
-	virtual void SetOpaque(void*)=0;
+	virtual bool stop() = 0;
 
-	virtual void SetDurationChangedFunction(DurFunc func) = 0;
+	virtual void seek(float pos) = 0;
 
-	virtual void SetCurrentChangedFucnton(CurFunc func) = 0;
+	virtual void setOpaque(void*) = 0;
 
-	virtual void SetUserHandleVideoFunction(VideoFunc func) = 0;
-
-	virtual void SetBufferFunction(BufferFunc func) = 0;
-
-	virtual void SetStatusFunction(StatusFunc func) = 0;
+	virtual void* getOpaque() = 0;
 };
 
-YMEDIA_DECL YMediaPlayer* CreatePlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode,void* opaque);
+YMEDIA_DECL YMediaPlayer* CreatePlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode);
 
 YMEDIA_DECL void DeletePlayer(YMediaPlayer*);

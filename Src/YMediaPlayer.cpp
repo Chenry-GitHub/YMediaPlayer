@@ -2,11 +2,9 @@
 
 #include "YMediaPlayerImp.h"
 
-YMediaPlayer* CreatePlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode, void* opaque)
+YMediaPlayer* CreatePlayer(AudioPlayMode audio_mode, VideoPlayMode video_mode)
 {
-	auto player = new YMediaPlayerImp(audio_mode, video_mode);
-	player->SetOpaque(opaque);
-	return player;
+	return  new YMediaPlayerImp(audio_mode, video_mode);
 }
 
 void DeletePlayer(YMediaPlayer*player)

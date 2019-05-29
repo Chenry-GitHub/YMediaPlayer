@@ -13,9 +13,6 @@
 
 
 YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_mode)
-	:status_func_(nullptr)
-	, opaque_(nullptr)
-	, user_video_func_(nullptr)
 {
 	//this is for initialize audio
 	switch (audio_mode)
@@ -40,7 +37,10 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	audio_->SetDataFunction(std::bind(&YMediaPlayerImp::OnAudioDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	audio_->SetBlockSeekFunction(std::bind(&YMediaPlayerImp::OnAudioSeekFunction, this));
 	audio_->SetFreeDataFunction(std::bind(&YMediaPlayerImp::OnAudioDataFree,this, std::placeholders::_1));
-
+	audio_->SetProgressFunction([&](int cur_pos) {
+		if (player_delegate_)
+			player_delegate_->onCurrentChanged(this, cur_pos);
+	});
 
 	//this is for video mode
 	switch (video_mode)
@@ -57,9 +57,9 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	decoder_.setDelegate(this);
 
 
-	io_mgr_.buffer_func_ = std::bind([&](float per) {
-		if (buffer_func_)
-			buffer_func_(opaque_, per);
+	io_mgr_.buffer_func_ = std::bind([&](float percent) {
+		if (player_delegate_)
+			player_delegate_->onNetworkBuffer(this, percent);
 	}, std::placeholders::_1);
 
 	io_mgr_.status_func_= std::bind([&](PlayerStatus status)
@@ -71,17 +71,18 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 
 YMediaPlayerImp::~YMediaPlayerImp()
 {
-	Stop();
-
+	stop();
+	if(audio_)
+		delete audio_;
+	if (video_)
+		delete video_;
 }
 
 
-bool YMediaPlayerImp::SetMedia(const char* path_file)
+bool YMediaPlayerImp::setMedia(const char* path_file)
 {
-	Stop();
+	stop();
 	printf("Stop\n");
-
-	path_file_ = path_file;
 
 	if (!io_mgr_.SetUrl(path_file))
 	{
@@ -101,26 +102,26 @@ bool YMediaPlayerImp::SetMedia(const char* path_file)
 	return true;
 }
 
-bool YMediaPlayerImp::Play()
+bool YMediaPlayerImp::play()
 {
 	audio_->Play();
 	video_->Play();
 	return true;
 }
 
-bool YMediaPlayerImp::Pause()
+bool YMediaPlayerImp::pause()
 {
 	audio_->Pause();
 	video_->Pause();
 	return true;
 }
 
-bool YMediaPlayerImp::IsPlaying()
+bool YMediaPlayerImp::isPlaying()
 {
 	return audio_->IsPlaying();
 }
 
-bool YMediaPlayerImp::Stop()
+bool YMediaPlayerImp::stop()
 {
 	audio_->Stop();
 	decoder_.ConductAudioBlocking();
@@ -138,7 +139,7 @@ bool YMediaPlayerImp::Stop()
 
 
 
-void YMediaPlayerImp::Seek(float pos)
+void YMediaPlayerImp::seek(float pos)
 {
 	decoder_.SeekPos(media_info_.dur*pos);
 	audio_->Seek(pos);
@@ -146,38 +147,13 @@ void YMediaPlayerImp::Seek(float pos)
 }
 
 
-void YMediaPlayerImp::SetDurationChangedFunction(DurFunc func)
-{
-	dur_func_ = func;
-}
 
-void YMediaPlayerImp::SetCurrentChangedFucnton(CurFunc func)
-{
-	cur_func_ = func;
-	audio_->SetProgressFunction([this](int dur) {
-		cur_func_(opaque_,dur);
-	});
-}
 
-void YMediaPlayerImp::SetOpaque(void*opa)
+void YMediaPlayerImp::setOpaque(void*opa)
 {
 	opaque_ = opa;
 }
 
-void YMediaPlayerImp::SetUserHandleVideoFunction(VideoFunc func)
-{
-	user_video_func_ = func;
-}
-
-void YMediaPlayerImp::SetBufferFunction(BufferFunc func)
-{
-	buffer_func_ = func;
-}
-
-void YMediaPlayerImp::SetStatusFunction(StatusFunc func)
-{
-	status_func_ = func;
-}
 
 void YMediaPlayerImp::onDecodeError(ymc::DecodeError error)
 {
@@ -208,8 +184,8 @@ void YMediaPlayerImp::onMediaInfo(MediaInfo info)
 	audio_->SetDuration(info.dur);
 	video_->SetDuration(info.dur);
 
-	if (dur_func_)
-		dur_func_(opaque_, (int)info.dur);
+	if (player_delegate_)
+		player_delegate_->onDurationChanged(this, (int)info.dur);
 	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
 }
 
@@ -221,6 +197,21 @@ int YMediaPlayerImp::onRead(char *data, int len)
 int64_t YMediaPlayerImp::onSeek(int64_t offset, int whence)
 {
 	return 	io_mgr_.Seek(offset, whence);
+}
+
+void YMediaPlayerImp::setDelegate(YMediaPlayer::Delegate* dele)
+{
+	player_delegate_ = dele;
+}
+
+YMediaPlayer::Delegate* YMediaPlayerImp::getDelegate()
+{
+	return player_delegate_;
+}
+
+void* YMediaPlayerImp::getOpaque()
+{
+	return opaque_;
 }
 
 void YMediaPlayerImp::OnAudioDataFree(char *data)
@@ -293,9 +284,9 @@ bool YMediaPlayerImp::OnVideoSeekFunction()
 bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
 {
 	//decoder_->user_video_func_;
-	if (user_video_func_)
+	if (player_delegate_)
 	{
-		user_video_func_(opaque_, data, width, height);
+		player_delegate_->onVideoData(this, data, width, height);
 		return true;
 	}
 	return false;
@@ -304,6 +295,6 @@ bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
 
 void YMediaPlayerImp::NotifyPlayerStatus(PlayerStatus st)
 {
-	if (status_func_)
-		status_func_(opaque_,st);
+	if (player_delegate_)
+		player_delegate_->onStatusChanged(this,st);
 }

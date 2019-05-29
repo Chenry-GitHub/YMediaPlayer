@@ -24,30 +24,21 @@ public:
 	YMediaPlayerImp(AudioPlayMode audio_mode,VideoPlayMode video_mode);
 	virtual~YMediaPlayerImp() override;
 	
-	virtual bool SetMedia(const char* path_file) override;
+	virtual bool setMedia(const char* path_file) override;
 	
-	virtual bool Play() override;
+	virtual bool play() override;
 
-	virtual bool Pause() override;
+	virtual bool pause() override;
 
-	virtual bool IsPlaying() override;
+	virtual bool isPlaying() override;
 
-	virtual bool Stop() override;
+	virtual bool stop() override;
 
-	virtual void Seek(float pos) override;
+	virtual void seek(float pos) override;
 
+	virtual void setOpaque(void*) override;
 
-	virtual void SetDurationChangedFunction(DurFunc func) override;
-
-	virtual void SetCurrentChangedFucnton(CurFunc func) override;
-
-	virtual void SetOpaque(void*) override;
-
-	virtual void SetUserHandleVideoFunction(VideoFunc func) override;
-
-	virtual void SetBufferFunction(BufferFunc func) override;
-
-	virtual void SetStatusFunction(StatusFunc func) override;
+	virtual void* getOpaque() override;
 
 //
 	virtual void onDecodeError(ymc::DecodeError) override;
@@ -60,7 +51,13 @@ public:
 
 
 	virtual int64_t onSeek(int64_t offset, int whence) override;
-//
+
+	virtual void setDelegate(YMediaPlayer::Delegate* dele) override;
+
+	virtual YMediaPlayer::Delegate* getDelegate() override;
+
+
+	
 protected:
 	void OnAudioDataFree(char *data);
 
@@ -79,19 +76,13 @@ protected:
 private:
 	void NotifyPlayerStatus(PlayerStatus);
 
-	std::string path_file_;
 	MediaInfo media_info_;
-	YMediaDecode  decoder_;
-
-	StatusFunc status_func_;
-	DurFunc dur_func_;
-	CurFunc cur_func_;
-	VideoFunc user_video_func_;
-	BufferFunc buffer_func_;
-
-	BaseAudio * audio_;
-	BaseVideo * video_;
-	void *opaque_;
-
+	YMediaDecode decoder_;
 	StreamIOMgr io_mgr_;
+
+
+	YMediaPlayer::Delegate* player_delegate_ = nullptr;
+	BaseAudio * audio_ = nullptr;
+	BaseVideo * video_ = nullptr;
+	void *opaque_ = nullptr;
 };
