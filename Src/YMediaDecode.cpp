@@ -28,38 +28,38 @@ YMediaDecode::Delegate* YMediaDecode::getDelegate()
 	return delegate_;
 }
 
-bool YMediaDecode::SetMedia(const std::string & path_file, int sample_rate, int channel)
+bool YMediaDecode::setMedia(const std::string & path_file, int sample_rate, int channel)
 {
-	StopDecode();
+	stopDecode();
 	path_file_ = path_file;
 	sample_rate_ = sample_rate;
 	channel_ = channel;
-	StartDecode();
+	startDecode();
 	return true;
 }
 
 
-bool YMediaDecode::StopDecode()
+bool YMediaDecode::stopDecode()
 {
 	is_manual_stop_ = true;
 	if (decode_thread_.joinable())
 	{
 		decode_thread_.join();//block here
 	}
-	EmptyAudioQue();
-	EmptyVideoQue();
+	emptyAudioQue();
+	emptyVideoQue();
 	return true;
 }
 
-bool YMediaDecode::StartDecode()
+bool YMediaDecode::startDecode()
 {
 	//YMediaDecode::DecodeThread();
-	decode_thread_ = std::move(std::thread(&YMediaDecode::DecodeThread, this));
+	decode_thread_ = std::move(std::thread(&YMediaDecode::decodeThread, this));
 	return true;
 }
 
 
-void YMediaDecode::EmptyAudioQue()
+void YMediaDecode::emptyAudioQue()
 {
 	std::lock_guard<std::mutex> lg(audio_seek_mutex_);
 	while (!audio_inner_que_.IsEmpty())
@@ -77,12 +77,12 @@ void YMediaDecode::EmptyAudioQue()
 		AudioPackageInfo info;
 		if (audio_que_.TryPop(info))
 		{
-			FreeAudioPackageInfo(&info);
+			freeAudioPackageInfo(&info);
 		}
 	}
 }
 
-void YMediaDecode::EmptyVideoQue()
+void YMediaDecode::emptyVideoQue()
 {
 	std::lock_guard<std::mutex> lg(video_seek_mutex_);
 	while (!video_inner_que_.IsEmpty())
@@ -102,21 +102,21 @@ void YMediaDecode::EmptyVideoQue()
 	}
 }
 
-void YMediaDecode::SeekPos(double pos)//ffmpeg pts 
+void YMediaDecode::seekPos(double pos)//ffmpeg pts 
 {
 	auto audio_ctx = audio_codec_.lock();
 	auto video_ctx = video_codec_.lock();
 	if (!audio_ctx || !video_ctx)
 		return;
 	is_seek_ = true;
-	if(audio_ctx->IsValid())
-	audio_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, audio_ctx->GetStream()->time_base);
+	if(audio_ctx->isValid())
+	audio_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, audio_ctx->getStream()->time_base);
 	
-	if(video_ctx->IsValid())
-	video_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, video_ctx->GetStream()->time_base);
+	if(video_ctx->isValid())
+	video_seek_convert_dur_ = av_rescale_q(pos*AV_TIME_BASE, { 1, AV_TIME_BASE }, video_ctx->getStream()->time_base);
 }
 
-AudioPackageInfo YMediaDecode::PopAudioQue()
+AudioPackageInfo YMediaDecode::popAudioQue()
 {
 	AudioPackageInfo info;
 	InnerPacketInfo pkg_info;
@@ -124,7 +124,7 @@ AudioPackageInfo YMediaDecode::PopAudioQue()
 	if (FLAG_PLAY == pkg_info.flag )
 	{
 		std::lock_guard<std::mutex> lg(audio_seek_mutex_);
-		DoConvertAudio(pkg_info.pkg);
+		doConvertAudio(pkg_info.pkg);
 		av_packet_unref(pkg_info.pkg);
 		av_packet_free(&pkg_info.pkg);
 		audio_que_.TryPop(info);
@@ -142,7 +142,7 @@ AudioPackageInfo YMediaDecode::PopAudioQue()
 	return info;
 }
 
-VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
+VideoPackageInfo YMediaDecode::popVideoQue(double cur_clock)
 {
 	VideoPackageInfo info;
 	InnerPacketInfo pkg_info;
@@ -150,7 +150,7 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 	if (FLAG_PLAY == pkg_info.flag )
 	{
 		std::lock_guard<std::mutex> lg(video_seek_mutex_);
-		DoConvertVideo(pkg_info.pkg, cur_clock);
+		doConvertVideo(pkg_info.pkg, cur_clock);
 		av_packet_unref(pkg_info.pkg);
 		av_packet_free(&pkg_info.pkg);
 		video_que_.TryPop(info);
@@ -168,14 +168,14 @@ VideoPackageInfo YMediaDecode::PopVideoQue(double cur_clock)
 }
 
 
-void YMediaDecode::FreeAudioPackageInfo(AudioPackageInfo*info)
+void YMediaDecode::freeAudioPackageInfo(AudioPackageInfo*info)
 {
 	if(info && info->error == ymc::ERROR_NO_ERROR)
 		av_free(info->data);
 }
 
 
-void YMediaDecode::ConductAudioBlocking()
+void YMediaDecode::conductAudioBlocking()
 {
 	InnerPacketInfo info_audio;
 	info_audio.pkg = av_packet_alloc();
@@ -185,7 +185,7 @@ void YMediaDecode::ConductAudioBlocking()
 	audio_cnd_.notify_all();
 }
 
-void YMediaDecode::ConductVideoBlocking()
+void YMediaDecode::conductVideoBlocking()
 {
 	InnerPacketInfo info_video;
 	info_video.pkg = av_packet_alloc();
@@ -196,26 +196,26 @@ void YMediaDecode::ConductVideoBlocking()
 }
 
 
-bool YMediaDecode::JudgeBlockAudioSeek()
+bool YMediaDecode::judgeBlockAudioSeek()
 {
 	unique_lock<std::mutex> unique(audio_cnd_lock_);
 	audio_cnd_.wait(unique, [&] {return audio_seek_convert_dur_ == SEEK_TIME_DEFAULT; });
 	return audio_seek_convert_dur_ != SEEK_TIME_DEFAULT;
 }
 
-bool YMediaDecode::JudgeBlockVideoSeek()
+bool YMediaDecode::judgeBlockVideoSeek()
 {
 	unique_lock<std::mutex> unique(video_cnd_lock_);
 	video_cnd_.wait(unique, [&] { return video_seek_convert_dur_ == SEEK_TIME_DEFAULT; });
 	return video_seek_convert_dur_ != SEEK_TIME_DEFAULT;
 }
 
-void YMediaDecode::AddError(ymc::DecodeError error)
+void YMediaDecode::addError(ymc::DecodeError error)
 {
 	error_ |= error;
 }
 
-void YMediaDecode::DecodeThread()
+void YMediaDecode::decodeThread()
 {
 	is_seek_ = false;
 	audio_seek_convert_dur_ = SEEK_TIME_DEFAULT;
@@ -223,23 +223,23 @@ void YMediaDecode::DecodeThread()
 	is_manual_stop_ = false;
 	uint8_t* pic_buff=nullptr;
 
-	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(YMediaDecode::ReadBuff, YMediaDecode::SeekBuff, this);
+	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(YMediaDecode::readBuff, YMediaDecode::seekBuff, this);
 	format_ctx_ = format;
-	if (!format->InitFormatCtx(path_file_.c_str()))
+	if (!format->initFormatCtx(path_file_.c_str()))
 	{
 		printf("InitFormatCtx Error\n");
 		
 		if (error_ & ymc::ERROR_READ_TIME_OUT)
 		{
-			NotifyDecodeStatus(ymc::ERROR_READ_TIME_OUT);
+			notifyDecodeStatus(ymc::ERROR_READ_TIME_OUT);
 		}
 		else if (error_ & ymc::ERROR_READ_USER_INTERRUPT)
 		{
-			NotifyDecodeStatus(ymc::ERROR_READ_USER_INTERRUPT);
+			notifyDecodeStatus(ymc::ERROR_READ_USER_INTERRUPT);
 		}
 		else if (error_ & ymc::ERROR_FORMAT)
 		{
-			NotifyDecodeStatus(ymc::ERROR_FORMAT);
+			notifyDecodeStatus(ymc::ERROR_FORMAT);
 		}
 		return;
 	}
@@ -247,7 +247,7 @@ void YMediaDecode::DecodeThread()
 	//notify media info for player
 	MediaInfo info;
 	info.dur = (double)format->ctx_->duration / AV_TIME_BASE;
-	NotifyMediaInfo(info);
+	notifyMediaInfo(info);
 
 	//this is for audio
 	std::shared_ptr<CodecCtx> audio_ctx = std::make_shared<CodecCtx>(format->ctx_, AVMEDIA_TYPE_AUDIO);
@@ -256,10 +256,10 @@ void YMediaDecode::DecodeThread()
 	std::shared_ptr<AVFrameManger > audio_frame = std::make_shared<AVFrameManger>();
 	audio_frame_ = audio_frame;
 
-	if (!audio_ctx->InitDecoder())
+	if (!audio_ctx->initDecoder())
 	{
 		printf("audio_ctx.InitDecoder Error\n");
-		NotifyDecodeStatus(ymc::ERROR_FORMAT);
+		notifyDecodeStatus(ymc::ERROR_FORMAT);
 		return;
 	}
 
@@ -282,7 +282,7 @@ void YMediaDecode::DecodeThread()
 	video_frame_ = video_frame;
 
 	std::shared_ptr<VideoConvertManger> video_convert;
-	if (!video_ctx->InitDecoder())
+	if (!video_ctx->initDecoder())
 	{
 		printf("video_ctx.InitDecoder Failed\n");
 		//NotifyDecodeStatus();
@@ -299,20 +299,20 @@ void YMediaDecode::DecodeThread()
 		//seek operation
 		if (is_seek_)
 		{
-			if (audio_ctx->IsValid())
+			if (audio_ctx->isValid())
 			{
 				if (av_seek_frame(format->ctx_, audio_ctx->stream_index_, audio_seek_convert_dur_, AVSEEK_FLAG_FRAME) >= 0)
 				{
-					EmptyAudioQue();
+					emptyAudioQue();
 					avcodec_flush_buffers(audio_ctx->codec_ctx_);
 				}
 			}
 			
-			if (video_ctx->IsValid())
+			if (video_ctx->isValid())
 			{
 				if (av_seek_frame(format->ctx_, video_ctx->stream_index_, video_seek_convert_dur_, AVSEEK_FLAG_FRAME) >= 0)
 				{
-					EmptyVideoQue();
+					emptyVideoQue();
 					avcodec_flush_buffers(video_ctx->codec_ctx_);
 				}
 			}
@@ -379,15 +379,15 @@ void YMediaDecode::DecodeThread()
 		format->release_package();
 	}
 
-	FlushAudioDecodec();
-	FlushVideoDecodec();
+	flushAudioDecodec();
+	flushVideoDecodec();
 
 	printf("YMediaDecode quit\n");
 }
 
 
 
-void YMediaDecode::DoConvertAudio(AVPacket *pkg)
+void YMediaDecode::doConvertAudio(AVPacket *pkg)
 {
 #if 1
 	auto audio_frame = audio_frame_.lock();
@@ -422,7 +422,7 @@ void YMediaDecode::DoConvertAudio(AVPacket *pkg)
 		//push to media player
 		void * data = av_malloc(Audiobuffer_size);
 		memcpy_s(data, Audiobuffer_size, out_buffer, Audiobuffer_size);
-		double pts = audio_frame->frame_->pts *av_q2d(codec_ctx->GetStream()->time_base);
+		double pts = audio_frame->frame_->pts *av_q2d(codec_ctx->getStream()->time_base);
 		//printf("pts:pts:pts:%f\n",pts);
 		
 		AudioPackageInfo info;
@@ -469,7 +469,7 @@ double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFr
 	else
 		pts = video_clock; // Don't get pts,set it to video clock
 
-	frame_delay = av_q2d(codec->GetStream()->time_base);
+	frame_delay = av_q2d(codec->getStream()->time_base);
 	frame_delay += srcFrame->repeat_pict * (frame_delay*0.5);
 
 	video_clock += frame_delay;
@@ -477,35 +477,35 @@ double YMediaDecode::synchronize(std::shared_ptr<CodecCtx> codec, AVFrame *srcFr
 	return video_clock;
 }
 
-void YMediaDecode::FlushVideoDecodec()
+void YMediaDecode::flushVideoDecodec()
 {
 	auto video_codec = video_codec_.lock();
-	if (video_codec->IsValid())
+	if (video_codec->isValid())
 	{
 		InnerPacketInfo info_video;
 		info_video.pkg = av_packet_alloc();
 		info_video.pkg->size = 0;
 		info_video.pkg->data = nullptr;
 		info_video.flag = FLAG_FLUSH_DECODEC;
-		DoConvertVideo(info_video.pkg, 0);
+		doConvertVideo(info_video.pkg, 0);
 	}
 }
 
-void YMediaDecode::FlushAudioDecodec()
+void YMediaDecode::flushAudioDecodec()
 {
 	auto audio_codec = audio_codec_.lock();
-	if (audio_codec->IsValid())
+	if (audio_codec->isValid())
 	{
 		InnerPacketInfo info_audio;
 		info_audio.pkg = av_packet_alloc();
 		info_audio.pkg->size = 0;
 		info_audio.pkg->data = nullptr;
 		info_audio.flag = FLAG_FLUSH_DECODEC;
-		DoConvertAudio(info_audio.pkg);
+		doConvertAudio(info_audio.pkg);
 	}
 }
 
-int YMediaDecode::ReadBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
+int YMediaDecode::readBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
 {
 	YMediaDecode* op = (YMediaDecode*)opaque;
 	if (op)
@@ -517,18 +517,18 @@ int YMediaDecode::ReadBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
 		}
 		else if (result  == -2)
 		{
-			op->AddError(ymc::ERROR_READ_TIME_OUT);
+			op->addError(ymc::ERROR_READ_TIME_OUT);
 		}
 		else if (result == -3)
 		{
-			op->AddError(ymc::ERROR_READ_USER_INTERRUPT);
+			op->addError(ymc::ERROR_READ_USER_INTERRUPT);
 		}
 		return -1;
 	}
 	return -1;
 }
 
-int64_t YMediaDecode::SeekBuff(void *opaque, int64_t offset, int whence)
+int64_t YMediaDecode::seekBuff(void *opaque, int64_t offset, int whence)
 {
 	YMediaDecode* op = (YMediaDecode*)opaque;
 	if (op)
@@ -539,19 +539,19 @@ int64_t YMediaDecode::SeekBuff(void *opaque, int64_t offset, int whence)
 	return	-1;
 }
 
-void YMediaDecode::NotifyDecodeStatus(ymc::DecodeError error)
+void YMediaDecode::notifyDecodeStatus(ymc::DecodeError error)
 {
 	if (delegate_)
 		delegate_->onDecodeError(error);
 }
 
-void YMediaDecode::NotifyMediaInfo(MediaInfo info)
+void YMediaDecode::notifyMediaInfo(MediaInfo info)
 {
 	if(delegate_)
 		delegate_->onMediaInfo(info);
 }
 
-void YMediaDecode::DoConvertVideo(AVPacket *pkg, double cur_clock)
+void YMediaDecode::doConvertVideo(AVPacket *pkg, double cur_clock)
 {
 	auto video_frame = video_frame_.lock();
 	auto codec_ctx = video_codec_.lock();
@@ -568,7 +568,7 @@ void YMediaDecode::DoConvertVideo(AVPacket *pkg, double cur_clock)
 
 	while (avcodec_receive_frame(codec_ctx->codec_ctx_, video_frame->frame_) == 0)
 	{
-		convert->Convert(video_frame->frame_->data, video_frame->frame_->linesize, codec_ctx->codec_ctx_->height);
+		convert->convert(video_frame->frame_->data, video_frame->frame_->linesize, codec_ctx->codec_ctx_->height);
 		//	sws_scale(convert->video_convert_ctx_, video_frame->frame_->data, video_frame->frame_->linesize, 0, codec_ctx->codec_ctx_->height, rgb_frame->frame_->data, rgb_frame->frame_->linesize);
 		//	ShowRGBToWnd(GetDesktopWindow(), m_pFrameRGB->data[0], codec_ctx->codec_ctx_->width, codec_ctx->codec_ctx_->height);
 		
@@ -587,7 +587,7 @@ void YMediaDecode::DoConvertVideo(AVPacket *pkg, double cur_clock)
 				video_pts = 0;
 			}
 
-			video_pts *= av_q2d(codec_ctx->GetStream()->time_base);
+			video_pts *= av_q2d(codec_ctx->getStream()->time_base);
 			video_pts = synchronize(codec_ctx, convert->rgb_frame_.frame_, video_pts, cur_clock);
 
 			VideoPackageInfo info;

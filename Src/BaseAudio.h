@@ -22,12 +22,10 @@ public:
 		virtual void onAudioFreeData(char*) = 0;
 	};
 
-	virtual void setDelegate(BaseAudio::Delegate* dele) = 0;
-	virtual BaseAudio::Delegate* getDelegate() = 0; 
-
-
+	virtual void setDelegate(BaseAudio::Delegate* dele) { delegate_ = dele; };
+	virtual BaseAudio::Delegate* getDelegate() {return delegate_;};
 
 protected:
-
+	BaseAudio::Delegate* delegate_=nullptr;
 };
 

@@ -174,8 +174,6 @@
     <ClInclude Include="..\..\..\Src\YMediaPlayerImp.h" />
     <ClInclude Include="..\..\..\Src\YMediaDecode.h" />
     <ClInclude Include="..\..\..\Src\YMediaPlayer.h" />
-    <ClInclude Include="YNetwork\BaseHttpASync.h" />
-    <ClInclude Include="YNetwork\HttpDownload.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

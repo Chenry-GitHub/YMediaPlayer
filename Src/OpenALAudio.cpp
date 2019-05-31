@@ -37,7 +37,7 @@ OpenALAudio::OpenALAudio()
 
 OpenALAudio::~OpenALAudio()
 {
-	Stop();//可能退出错误，play线程被阻塞时
+	stop();//可能退出错误，play线程被阻塞时
 	alDeleteBuffers(NUMBUFFERS, audio_buf_);
 	alDeleteSources(1, &source_id_);
 
@@ -74,7 +74,7 @@ int OpenALAudio::UnInitPlayer()
 	return AL_TRUE;
 }
 
-void OpenALAudio::Play()
+void OpenALAudio::play()
 {
 	BaseAudio::Play();
 	int state;
@@ -86,9 +86,9 @@ void OpenALAudio::Play()
 	}
 }
 
-void OpenALAudio::Pause()
+void OpenALAudio::pause()
 {
-	BaseAudio::Pause();
+	BaseAudio::pause();
 	int state;
 	alGetSourcei(source_id_, AL_SOURCE_STATE, &state);
 	if (state == AL_STOPPED || state == AL_INITIAL || state == AL_PAUSED)
@@ -98,9 +98,9 @@ void OpenALAudio::Pause()
 	}
 }
 
-void OpenALAudio::Stop()
+void OpenALAudio::stop()
 {
-	BaseAudio::Stop();
+	BaseAudio::stop();
 
 	alSourceStop(source_id_);
 	alSourcei(source_id_, AL_BUFFER, 0x00);
@@ -108,7 +108,7 @@ void OpenALAudio::Stop()
 	CLEAR_MAP(que_map_);
 }
 
-void OpenALAudio::PlayThread()
+void OpenALAudio::playThread()
 {
 	is_stop_ = false;
 	//first time ,need to fill the Source
@@ -147,13 +147,13 @@ void OpenALAudio::PlayThread()
 
 
 
-		if (!IsPlaying())
+		if (!isPlaying())
 		{
 			continue;
 		}
 		else
 		{
-			Play();
+			play();
 		}
 
 		ALint processed = 0;

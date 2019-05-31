@@ -13,7 +13,7 @@
 WavAudio::WavAudio()
 	:is_seek_(false)
 {
-	InitPlayer(AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
+	initPlayer(AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	
 }
 
@@ -64,14 +64,14 @@ void WavAudio::freeBlocks(WAVEHDR* blockArray)
 }
 
 
-void WavAudio::PlayThread()
+void WavAudio::playThread()
 {
 
 	while (false == is_stop_)
 	{
 		delegate_->onAudioSeek();
 
-		if (!IsPlaying())
+		if (!isPlaying())
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			continue;
@@ -104,15 +104,12 @@ void WavAudio::PlayThread()
 			waveOutUnprepareHeader(hWaveOut_, current, sizeof(WAVEHDR));
 		}
 
-		
 		memcpy(current->lpData , data, len);
 		current->dwBufferLength = len;
 		waveOutPrepareHeader(hWaveOut_, current, sizeof(WAVEHDR));
 		waveOutWrite(hWaveOut_, current, sizeof(WAVEHDR));
 
 		clock_map_[waveCurrentBlock_] = clock;
-
-
 		waveFreeBlockCount_--;
 		/*
 		* wait for a block to become free
@@ -150,33 +147,21 @@ void WavAudio::WaitForPlayDone()
 	waveCurrentBlock_ = 0;
 }
 
-void WavAudio::Seek(float percent)
+void WavAudio::seek(float percent)
 {
-	BaseAudio::Seek(percent);
+	BaseAudio::seek(percent);
 	is_seek_ = true;
 }
 
 
-void WavAudio::setDelegate(BaseAudio::Delegate* dele)
-{
-	delegate_ = dele;
-}
-
-BaseAudio::Delegate* WavAudio::getDelegate()
-{
-	return delegate_;
-}
-
 WavAudio::~WavAudio()
 {
-	
 	freeBlocks(waveBlocks_);
 	waveOutClose(hWaveOut_);
-
 }
 
 
-bool WavAudio::InitPlayer(int sample_rate,int channels)
+bool WavAudio::initPlayer(int sample_rate,int channels)
 {
 	WAVEFORMATEX wfx; /* look this up in your documentation */
 					  /*

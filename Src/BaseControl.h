@@ -16,13 +16,13 @@ public:
 	}
 	virtual ~BaseControl() {}
 
-	void BeginPlayThread()
+	void beginPlayThread()
 	{
 		is_stop_ = false;
-		play_thread_ = std::move(std::thread(&BaseControl::PlayThread, this));
+		play_thread_ = std::move(std::thread(&BaseControl::playThread, this));
 	}
 
-	void EndPlayThread()
+	void endPlayThread()
 	{
 		is_playing_ = false;
 		if (play_thread_.joinable())
@@ -32,23 +32,23 @@ public:
 		}
 	}
 
-	virtual void Play()
+	virtual void play()
 	{
 		is_stop_ = false;
 		is_playing_ = true;
 	}
 
-	virtual void Pause()
+	virtual void pause()
 	{
 		is_playing_ = false;
 	}
 
-	virtual void Seek(float percent)
+	virtual void seek(float percent)
 	{
 		clock_ = duration_*percent;
 	}
 
-	virtual void Stop()
+	virtual void stop()
 	{
 		clock_ = 0.0f;
 		duration_ = 0.0f;
@@ -56,34 +56,33 @@ public:
 		is_stop_ = true;
 	}
 
-	void SetDuration(double dur)
+	void setDuration(double dur)
 	{
 		duration_ = dur;
 	}
 
 
-	bool IsPlaying()
+	bool isPlaying()
 	{
 		return is_playing_;
 	}
 
-	bool IsStop()
+	bool isStop()
 	{
 		return is_stop_;
 	}
 
-	double GetClock()
+	double getClock()
 	{
 		return clock_;
 	}
 
 protected:
+	virtual void playThread() = 0;
+
 	std::atomic_bool is_playing_;
 	std::atomic_bool is_stop_;
-	double clock_;
-	double duration_;
-
-	virtual void PlayThread() = 0;
-
+	double clock_ = 0.0f;
+	double duration_ = 0.0f;
 	std::thread play_thread_;
 };

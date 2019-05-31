@@ -14,19 +14,11 @@ public:
 	WavAudio();
 	~WavAudio();
 
-	bool InitPlayer(int sample_rate, int channels);
+	bool initPlayer(int sample_rate, int channels);
 	
-	virtual void Seek(float percent) override;
-
-
-	virtual void setDelegate(BaseAudio::Delegate* dele) override;
-
-
-	virtual BaseAudio::Delegate* getDelegate() override;
+	virtual void seek(float percent) override;
 
 protected:
-
-
 	static void CALLBACK waveOutProc(
 		HWAVEOUT hWaveOut,
 		UINT uMsg,
@@ -39,7 +31,7 @@ protected:
 
 	void freeBlocks(WAVEHDR* blockArray);
 
-	virtual void PlayThread() override;
+	virtual void playThread() override;
 
 	void WaitForPlayDone();
 private:
@@ -54,7 +46,5 @@ private:
 	std::map<int, double> clock_map_;
 
 	std::atomic_bool is_seek_;
-
-	BaseAudio::Delegate* delegate_=nullptr;
 };
 #endif

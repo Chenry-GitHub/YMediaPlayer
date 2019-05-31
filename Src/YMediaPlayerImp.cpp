@@ -55,7 +55,7 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 
 	io_mgr_.status_func_= std::bind([&](PlayerStatus status)
 	{
-		NotifyPlayerStatus(status);
+		notifyPlayerStatus(status);
 	},std::placeholders::_1);
 
 }
@@ -75,18 +75,18 @@ bool YMediaPlayerImp::setMedia(const char* path_file)
 	stop();
 	printf("Stop\n");
 
-	if (!io_mgr_.SetUrl(path_file))
+	if (!io_mgr_.setUrl(path_file))
 	{
-		NotifyPlayerStatus(PlayerStatus::ErrorUrl);
+		notifyPlayerStatus(PlayerStatus::ErrorUrl);
 		return false;
 	}
 	
-	decoder_.SetMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
+	decoder_.setMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
 
-	audio_->BeginPlayThread();
+	audio_->beginPlayThread();
 
-	video_->BeginPlayThread();
+	video_->beginPlayThread();
 
 
 	printf("SetMediaFromFile\n");
@@ -95,36 +95,36 @@ bool YMediaPlayerImp::setMedia(const char* path_file)
 
 bool YMediaPlayerImp::play()
 {
-	audio_->Play();
-	video_->Play();
+	audio_->play();
+	video_->play();
 	return true;
 }
 
 bool YMediaPlayerImp::pause()
 {
-	audio_->Pause();
-	video_->Pause();
+	audio_->pause();
+	video_->pause();
 	return true;
 }
 
 bool YMediaPlayerImp::isPlaying()
 {
-	return audio_->IsPlaying();
+	return audio_->isPlaying();
 }
 
 bool YMediaPlayerImp::stop()
 {
-	audio_->Stop();
-	decoder_.ConductAudioBlocking();
-	audio_->EndPlayThread();
+	audio_->stop();
+	decoder_.conductAudioBlocking();
+	audio_->endPlayThread();
 
-	video_->Stop();
-	decoder_.ConductVideoBlocking();
-	video_->EndPlayThread();
+	video_->stop();
+	decoder_.conductVideoBlocking();
+	video_->endPlayThread();
 
-	io_mgr_.Conduct();
-	decoder_.StopDecode();
-	io_mgr_.Stop();
+	io_mgr_.conduct();
+	decoder_.stopDecode();
+	io_mgr_.stop();
 	return true;
 }
 
@@ -132,9 +132,9 @@ bool YMediaPlayerImp::stop()
 
 void YMediaPlayerImp::seek(float pos)
 {
-	decoder_.SeekPos(media_info_.dur*pos);
-	audio_->Seek(pos);
-	video_->Seek(pos);
+	decoder_.seekPos(media_info_.dur*pos);
+	audio_->seek(pos);
+	video_->seek(pos);
 }
 
 
@@ -152,16 +152,16 @@ void YMediaPlayerImp::onDecodeError(ymc::DecodeError error)
 	{
 	case ymc::ERROR_FORMAT:
 	{
-		NotifyPlayerStatus(PlayerStatus::ErrorFormat);
+		notifyPlayerStatus(PlayerStatus::ErrorFormat);
 	}
 	break;
 	case ymc::ERROR_PKG_ERROR:
 	{
-		NotifyPlayerStatus(PlayerStatus::ErrorDecode);
+		notifyPlayerStatus(PlayerStatus::ErrorDecode);
 	}
 	case ymc::ERROR_READ_USER_INTERRUPT:
 	{
-		NotifyPlayerStatus(PlayerStatus::ErrorUserInterrupt);
+		notifyPlayerStatus(PlayerStatus::ErrorUserInterrupt);
 	}
 	break;
 	default:
@@ -172,8 +172,8 @@ void YMediaPlayerImp::onDecodeError(ymc::DecodeError error)
 void YMediaPlayerImp::onMediaInfo(MediaInfo info)
 {
 	media_info_ = info;
-	audio_->SetDuration(info.dur);
-	video_->SetDuration(info.dur);
+	audio_->setDuration(info.dur);
+	video_->setDuration(info.dur);
 
 	if (player_delegate_)
 		player_delegate_->onDurationChanged(this, (int)info.dur);
@@ -182,12 +182,12 @@ void YMediaPlayerImp::onMediaInfo(MediaInfo info)
 
 int YMediaPlayerImp::onRead(char *data, int len)
 {
-	return 	io_mgr_.Read(data, len);
+	return 	io_mgr_.read(data, len);
 }
 
 int64_t YMediaPlayerImp::onSeek(int64_t offset, int whence)
 {
-	return 	io_mgr_.Seek(offset, whence);
+	return 	io_mgr_.seek(offset, whence);
 }
 
 void YMediaPlayerImp::setDelegate(YMediaPlayer::Delegate* dele)
@@ -202,12 +202,12 @@ YMediaPlayer::Delegate* YMediaPlayerImp::getDelegate()
 
 bool YMediaPlayerImp::onVideoSeek()
 {
-	return decoder_.JudgeBlockVideoSeek();
+	return decoder_.judgeBlockVideoSeek();
 }
 
 bool YMediaPlayerImp::onVideoGetData(char ** data, int *width, int *height, double *pts)
 {
-	VideoPackageInfo  && pkg = decoder_.PopVideoQue(video_->GetClock());
+	VideoPackageInfo  && pkg = decoder_.popVideoQue(video_->getClock());
 	if (pkg.error == ymc::ERROR_NO_ERROR)
 	{
 		*data = (char*)pkg.data;
@@ -221,12 +221,12 @@ bool YMediaPlayerImp::onVideoGetData(char ** data, int *width, int *height, doub
 
 bool YMediaPlayerImp::onVideoSync()
 {
-	while (!audio_->IsStop() || !video_->IsStop())
+	while (!audio_->isStop() || !video_->isStop())
 	{
 		//printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
-		if (video_->GetClock() <= audio_->GetClock())
+		if (video_->getClock() <= audio_->getClock())
 			return true;
-		int delayTime = static_cast<int>((video_->GetClock() - audio_->GetClock()) * 1000);
+		int delayTime = static_cast<int>((video_->getClock() - audio_->getClock()) * 1000);
 		delayTime = delayTime > 1 ? 1 : delayTime;
 		std::this_thread::sleep_for(std::chrono::milliseconds(delayTime));
 	}
@@ -235,7 +235,6 @@ bool YMediaPlayerImp::onVideoSync()
 
 void YMediaPlayerImp::onVideoDisplay(void *data, int width, int height)
 {
-	//decoder_->user_video_func_;
 	if (player_delegate_)
 	{
 		player_delegate_->onVideoData(this, data, width, height);
@@ -244,7 +243,7 @@ void YMediaPlayerImp::onVideoDisplay(void *data, int width, int height)
 
 bool YMediaPlayerImp::onAudioGetData(char ** data, int *len, double *pts)
 {
-	AudioPackageInfo &&info = decoder_.PopAudioQue();
+	AudioPackageInfo &&info = decoder_.popAudioQue();
 	if (info.error == ymc::ERROR_NO_ERROR)
 	{
 		*data = (char*)info.data;
@@ -260,11 +259,12 @@ void YMediaPlayerImp::onAudioCurrent(int cur_pos)
 {
 	if(player_delegate_)
 		player_delegate_->onCurrentChanged(this, cur_pos);
+
 }
 
 void YMediaPlayerImp::onAudioSeek()
 {
-	decoder_.JudgeBlockAudioSeek();
+	decoder_.judgeBlockAudioSeek();
 }
 
 void YMediaPlayerImp::onAudioFreeData(char*data)
@@ -274,7 +274,7 @@ void YMediaPlayerImp::onAudioFreeData(char*data)
 		AudioPackageInfo info;
 		info.data = data;
 		info.error = ymc::ERROR_NO_ERROR;
-		decoder_.FreeAudioPackageInfo(&info);
+		decoder_.freeAudioPackageInfo(&info);
 	}
 
 }
@@ -286,7 +286,7 @@ void* YMediaPlayerImp::getOpaque()
 
 
 
-void YMediaPlayerImp::NotifyPlayerStatus(PlayerStatus st)
+void YMediaPlayerImp::notifyPlayerStatus(PlayerStatus st)
 {
 	if (player_delegate_)
 		player_delegate_->onStatusChanged(this,st);

@@ -20,15 +20,15 @@ public:
 	StreamIOMgr();
 	~StreamIOMgr();
 
-	void Conduct();
+	void conduct();
 
-	void Stop();
+	void stop();
 
-	bool SetUrl(const std::string &url);
+	bool setUrl(const std::string &url);
 
-	int Read(char *data,int len);
+	int read(char *data,int len);
 
-	int64_t Seek(int64_t offset ,int whence);
+	int64_t seek(int64_t offset ,int whence);
 
 	std::function <void(float)> buffer_func_ = nullptr;
 

@@ -20,14 +20,14 @@ public:
 	static int InitPlayer();
 	static int UnInitPlayer();
 
-	virtual void Play() override;
+	virtual void play() override;
 
-	virtual void Pause() override;
+	virtual void pause() override;
 
-	virtual void Stop() override; 
+	virtual void stop() override; 
 
 protected:
-	virtual void PlayThread()  override;
+	virtual void playThread()  override;
 
 	bool FillAudioBuff(ALuint& buf);
 private:

@@ -10,7 +10,7 @@
 
 
 #include "YMediaPlayer.h"
-#include "..\StreamIOMgr.h"
+#include "StreamIOMgr.h"
 #include "YMediaDecode.h"
 #include "BaseAudio.h"
 #include "BaseVideo.h"
@@ -48,7 +48,6 @@ public:
 	virtual void* getOpaque() override;
 
 //
-	
 protected:
 
 	virtual void onDecodeError(ymc::DecodeError) override;
@@ -70,7 +69,7 @@ protected:
 protected:
 
 private:
-	void NotifyPlayerStatus(PlayerStatus);
+	void notifyPlayerStatus(PlayerStatus);
 
 	MediaInfo media_info_;
 	YMediaDecode decoder_;

@@ -4,7 +4,7 @@
 #include <thread>
 #include "BaseControl.h"
 
-class BaseVideo:public BaseControl
+class BaseVideo :public BaseControl
 {
 public:
 	class Delegate
@@ -16,9 +16,10 @@ public:
 		virtual void onVideoDisplay(void *data, int width, int height) = 0;
 	};
 
-	virtual void setDelegate(BaseVideo::Delegate * dele) = 0 ;
+	virtual void setDelegate(BaseVideo::Delegate * dele) { delegate_ = dele; };
+	virtual BaseVideo::Delegate * getDelegate() {return delegate_;};
 
-	virtual BaseVideo::Delegate * getDelegate() = 0;
-
+protected:
+	BaseVideo::Delegate * delegate_ = nullptr;
 };
 

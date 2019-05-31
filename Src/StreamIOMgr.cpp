@@ -15,7 +15,7 @@ StreamIOMgr::~StreamIOMgr()
 }
 
 
-void StreamIOMgr::Conduct()
+void StreamIOMgr::conduct()
 {
 	switch (stream_type_)
 	{
@@ -39,7 +39,7 @@ void StreamIOMgr::Conduct()
 	}
 }
 
-void StreamIOMgr::Stop()
+void StreamIOMgr::stop()
 {
 	switch (stream_type_)
 	{
@@ -73,7 +73,7 @@ void StreamIOMgr::Stop()
 	is_stop_ = true;
 }
 
-bool StreamIOMgr::SetUrl(const std::string &url)
+bool StreamIOMgr::setUrl(const std::string &url)
 {
 	std::string temp = url;
 	std::transform(temp.begin(), temp.end(), temp.begin(), ::tolower);
@@ -109,7 +109,7 @@ bool StreamIOMgr::SetUrl(const std::string &url)
 	return true;
 }
 
-int StreamIOMgr::Read(char *data, int len)
+int StreamIOMgr::read(char *data, int len)
 {
 	int read_size = 0;
 	switch (stream_type_)
@@ -139,7 +139,7 @@ int StreamIOMgr::Read(char *data, int len)
 	return read_size;
 }
 
-int64_t StreamIOMgr::Seek(int64_t offset, int whence)
+int64_t StreamIOMgr::seek(int64_t offset, int whence)
 {
 	int64_t pos =0;
 	switch (stream_type_)

@@ -12,24 +12,14 @@ ConstomVideo::~ConstomVideo()
 {
 }
 
-void ConstomVideo::setDelegate(BaseVideo::Delegate * dele)
-{
-	delegate_ = dele;
-}
-
-BaseVideo::Delegate * ConstomVideo::getDelegate()
-{
-	return delegate_;
-}
-
-void ConstomVideo::PlayThread()
+void ConstomVideo::playThread()
 {
 	while (false == is_stop_)
 	{
 		
 		delegate_->onVideoSeek();
 
-		if (!IsPlaying())
+		if (!isPlaying())
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			continue;

@@ -58,66 +58,66 @@ public:
 	YMediaDecode::Delegate* getDelegate();
 
 	/*设置媒体信息*/
-	bool SetMedia(const std::string & path_file,int sample_rate,int channel);
+	bool setMedia(const std::string & path_file,int sample_rate,int channel);
 
 	/*开始解码*/
-	bool StartDecode();
+	bool startDecode();
 
 	/*停止解码*/
-	bool StopDecode();
+	bool stopDecode();
 
 	/*Play层调用，设置seek位置*/
-	void SeekPos(double pos);
+	void seekPos(double pos);
 
 
 	/*Play层调用，释放播放后的包体*/
-	void FreeAudioPackageInfo(AudioPackageInfo*);
+	void freeAudioPackageInfo(AudioPackageInfo*);
 
 	/*清空音频，视频队列*/
-	void EmptyAudioQue();
-	void EmptyVideoQue();
+	void emptyAudioQue();
+	void emptyVideoQue();
 
 	/*Play层调用获取数据，分别在不同的线程中调用*/
-	AudioPackageInfo PopAudioQue();
-	VideoPackageInfo PopVideoQue(double cur_clock); 
+	AudioPackageInfo popAudioQue();
+	VideoPackageInfo popVideoQue(double cur_clock); 
 
 	/*导通Play层阻塞*/
-	void ConductAudioBlocking();
-	void ConductVideoBlocking();
+	void conductAudioBlocking();
+	void conductVideoBlocking();
 
 	/*用于Play层调用，出现阻塞seek操作*/
-	bool JudgeBlockAudioSeek();
-	bool JudgeBlockVideoSeek();
+	bool judgeBlockAudioSeek();
+	bool judgeBlockVideoSeek();
 
-	void AddError(ymc::DecodeError error);
+	void addError(ymc::DecodeError error);
 protected:
 
 	/*解码线程*/
-	void DecodeThread();
+	void decodeThread();
 
 	/*解码转换*/
-	void DoConvertAudio(AVPacket *pkg);
-	void DoConvertVideo(AVPacket *pkg,double cur_clock);
+	void doConvertAudio(AVPacket *pkg);
+	void doConvertVideo(AVPacket *pkg,double cur_clock);
 
 	/*获取视频恰当的pts*/
 	double synchronize(std::shared_ptr<CodecCtx>,AVFrame *srcFrame, double pts, double cur_clock);
 
 	/*退出解码线程需要调用的*/
-	void FlushVideoDecodec();
-	void FlushAudioDecodec();
+	void flushVideoDecodec();
+	void flushAudioDecodec();
 
 	/*
 	return -2: time out 
 	return -3: user interrupt
 	*/
-	static int ReadBuff(void *opaque, uint8_t *buf, int buf_size);
+	static int readBuff(void *opaque, uint8_t *buf, int buf_size);
 
-	static int64_t SeekBuff(void *opaque, int64_t offset, int whence);
+	static int64_t seekBuff(void *opaque, int64_t offset, int whence);
 private:
 
-	void NotifyDecodeStatus(ymc::DecodeError);
+	void notifyDecodeStatus(ymc::DecodeError);
 
-	void NotifyMediaInfo(MediaInfo info);
+	void notifyMediaInfo(MediaInfo info);
 	
 	
 	int error_ = ymc::ERROR_NO_ERROR;
@@ -222,11 +222,11 @@ public:
 		avformat_free_context(ctx_);
 	}
 
-	bool InitFormatCtx(const char* filename)
+	bool initFormatCtx(const char* filename)
 	{
 		if (avformat_open_input(&ctx_, "", 0, 0) < 0) 
 		{
-			deocdec_->AddError(ymc::ERROR_FORMAT);
+			deocdec_->addError(ymc::ERROR_FORMAT);
 			return false;
 		}
 		open_input_ = true;
@@ -280,7 +280,7 @@ public:
 		}
 	}
 
-	bool InitDecoder()
+	bool initDecoder()
 	{
 		if (!format_)
 			return false;
@@ -335,12 +335,12 @@ public:
 		}
 	}
 
-	AVStream *GetStream()
+	AVStream *getStream()
 	{
 		return format_->streams[stream_index_];
 	}
 
-	bool IsValid()
+	bool isValid()
 	{
 		return stream_index_ >= 0;
 	}
@@ -418,7 +418,7 @@ public:
 		sws_freeContext(video_convert_ctx_);
 	}
 
-	void Convert(const uint8_t *const* src_data,int *src_stride,int height)
+	void convert(const uint8_t *const* src_data,int *src_stride,int height)
 	{
 		sws_scale(video_convert_ctx_, src_data, src_stride, 0,height, rgb_frame_.frame_->data, rgb_frame_.frame_->linesize);
 	}
