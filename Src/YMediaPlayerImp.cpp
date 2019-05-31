@@ -34,13 +34,7 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 		}
 #endif
 	}
-	audio_->SetDataFunction(std::bind(&YMediaPlayerImp::OnAudioDataFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	audio_->SetBlockSeekFunction(std::bind(&YMediaPlayerImp::OnAudioSeekFunction, this));
-	audio_->SetFreeDataFunction(std::bind(&YMediaPlayerImp::OnAudioDataFree,this, std::placeholders::_1));
-	audio_->SetProgressFunction([&](int cur_pos) {
-		if (player_delegate_)
-			player_delegate_->onCurrentChanged(this, cur_pos);
-	});
+	audio_->setDelegate(this);
 
 	//this is for video mode
 	switch (video_mode)
@@ -49,10 +43,7 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 		video_ = new ConstomVideo();
 		break;
 	}
-	video_->SetDataFunction(std::bind(&YMediaPlayerImp::OnVideoDataFunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-	video_->SetSyncToAudioFunction(std::bind(&YMediaPlayerImp::OnSynchronizeVideo, this));
-	video_->SetBlockSeekFunction(std::bind(&YMediaPlayerImp::OnVideoSeekFunction, this));
-	video_->SetUserDisplayFunction(std::bind(&YMediaPlayerImp::OnUserDisplayFunction,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	video_->setDelegate(this);
 
 	decoder_.setDelegate(this);
 
@@ -209,55 +200,12 @@ YMediaPlayer::Delegate* YMediaPlayerImp::getDelegate()
 	return player_delegate_;
 }
 
-void* YMediaPlayerImp::getOpaque()
+bool YMediaPlayerImp::onVideoSeek()
 {
-	return opaque_;
+	return decoder_.JudgeBlockVideoSeek();
 }
 
-void YMediaPlayerImp::OnAudioDataFree(char *data)
-{
-	if (data)
-	{
-		AudioPackageInfo info;
-		info.data = data;
-		info.error = ymc::ERROR_NO_ERROR;
-		decoder_.FreeAudioPackageInfo(&info);
-	}
-	
-}
-
-bool YMediaPlayerImp::OnSynchronizeVideo()
-{
-	while (!audio_->IsStop() || !video_->IsStop())
-	{
-		//printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
-		if (video_->GetClock()<= audio_->GetClock())
-			return true;
-		int delayTime = static_cast<int>((video_->GetClock() - audio_->GetClock()) * 1000);
-		delayTime = delayTime > 1 ? 1 : delayTime;
-		std::this_thread::sleep_for(std::chrono::milliseconds(delayTime));
-	}
-	return false;
-}
-
-
-
-
-bool YMediaPlayerImp::OnAudioDataFunction(char ** data, int *len, double *pts)
-{
-	AudioPackageInfo &&info = decoder_.PopAudioQue();
-	if (info.error == ymc::ERROR_NO_ERROR)
-	{
-		*data = (char*)info.data;
-		*len = info.size;
-		*pts = info.pts;
-		return true;
-	}
-	
-	return false;
-}
-
-bool YMediaPlayerImp::OnVideoDataFunction(char ** data, int *width, int *height, double *pts)
+bool YMediaPlayerImp::onVideoGetData(char ** data, int *width, int *height, double *pts)
 {
 	VideoPackageInfo  && pkg = decoder_.PopVideoQue(video_->GetClock());
 	if (pkg.error == ymc::ERROR_NO_ERROR)
@@ -271,26 +219,71 @@ bool YMediaPlayerImp::OnVideoDataFunction(char ** data, int *width, int *height,
 	return false;
 }
 
-bool YMediaPlayerImp::OnAudioSeekFunction()
+bool YMediaPlayerImp::onVideoSync()
 {
-	return decoder_.JudgeBlockAudioSeek();
+	while (!audio_->IsStop() || !video_->IsStop())
+	{
+		//printf("%f,%f \n", video_->GetClock(), audio_->GetClock());
+		if (video_->GetClock() <= audio_->GetClock())
+			return true;
+		int delayTime = static_cast<int>((video_->GetClock() - audio_->GetClock()) * 1000);
+		delayTime = delayTime > 1 ? 1 : delayTime;
+		std::this_thread::sleep_for(std::chrono::milliseconds(delayTime));
+	}
+	return false;
 }
 
-bool YMediaPlayerImp::OnVideoSeekFunction()
-{
-	return decoder_.JudgeBlockVideoSeek();
-}
-
-bool YMediaPlayerImp::OnUserDisplayFunction(void *data, int width, int height)
+void YMediaPlayerImp::onVideoDisplay(void *data, int width, int height)
 {
 	//decoder_->user_video_func_;
 	if (player_delegate_)
 	{
 		player_delegate_->onVideoData(this, data, width, height);
+	}
+}
+
+bool YMediaPlayerImp::onAudioGetData(char ** data, int *len, double *pts)
+{
+	AudioPackageInfo &&info = decoder_.PopAudioQue();
+	if (info.error == ymc::ERROR_NO_ERROR)
+	{
+		*data = (char*)info.data;
+		*len = info.size;
+		*pts = info.pts;
 		return true;
 	}
+
 	return false;
 }
+
+void YMediaPlayerImp::onAudioCurrent(int cur_pos)
+{
+	if(player_delegate_)
+		player_delegate_->onCurrentChanged(this, cur_pos);
+}
+
+void YMediaPlayerImp::onAudioSeek()
+{
+	decoder_.JudgeBlockAudioSeek();
+}
+
+void YMediaPlayerImp::onAudioFreeData(char*data)
+{
+	if (data)
+	{
+		AudioPackageInfo info;
+		info.data = data;
+		info.error = ymc::ERROR_NO_ERROR;
+		decoder_.FreeAudioPackageInfo(&info);
+	}
+
+}
+
+void* YMediaPlayerImp::getOpaque()
+{
+	return opaque_;
+}
+
 
 
 void YMediaPlayerImp::NotifyPlayerStatus(PlayerStatus st)

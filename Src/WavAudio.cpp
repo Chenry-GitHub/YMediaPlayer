@@ -69,7 +69,7 @@ void WavAudio::PlayThread()
 
 	while (false == is_stop_)
 	{
-		seek_func_();
+		delegate_->onAudioSeek();
 
 		if (!IsPlaying())
 		{
@@ -86,7 +86,7 @@ void WavAudio::PlayThread()
 		char *data;
 		int len;
 		double clock;
-		if (!data_func_(&data, &len, &clock))
+		if (!delegate_->onAudioGetData(&data, &len, &clock))
 		{
 			continue;
 		}
@@ -99,10 +99,8 @@ void WavAudio::PlayThread()
 		if (current->dwFlags & WHDR_PREPARED)
 		{
 			clock_ = clock_map_[waveCurrentBlock_];
-			if (cur_func_)
-			{
-				cur_func_(clock_);
-			}
+			
+			delegate_->onAudioCurrent(clock_);
 			waveOutUnprepareHeader(hWaveOut_, current, sizeof(WAVEHDR));
 		}
 
@@ -134,7 +132,7 @@ void WavAudio::PlayThread()
 		current->dwUser = 0;
 
 		//free audio data
-		free_func_(data);
+		delegate_->onAudioFreeData(data);
 	}
 	WaitForPlayDone();
 	printf("Audio thread quit\n");
@@ -158,6 +156,16 @@ void WavAudio::Seek(float percent)
 	is_seek_ = true;
 }
 
+
+void WavAudio::setDelegate(BaseAudio::Delegate* dele)
+{
+	delegate_ = dele;
+}
+
+BaseAudio::Delegate* WavAudio::getDelegate()
+{
+	return delegate_;
+}
 
 WavAudio::~WavAudio()
 {

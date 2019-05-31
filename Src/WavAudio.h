@@ -18,6 +18,12 @@ public:
 	
 	virtual void Seek(float percent) override;
 
+
+	virtual void setDelegate(BaseAudio::Delegate* dele) override;
+
+
+	virtual BaseAudio::Delegate* getDelegate() override;
+
 protected:
 
 
@@ -48,5 +54,7 @@ private:
 	std::map<int, double> clock_map_;
 
 	std::atomic_bool is_seek_;
+
+	BaseAudio::Delegate* delegate_=nullptr;
 };
 #endif

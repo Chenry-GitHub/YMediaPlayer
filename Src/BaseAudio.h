@@ -13,60 +13,21 @@
 class BaseAudio:public BaseControl
 {
 public:
-	BaseAudio()
-		:data_func_(nullptr)
-		, status_func_(nullptr)
-		, dur_func_(nullptr)
-		, cur_func_(nullptr)
-		, seek_func_(nullptr)
-	{ 
-		Stop(); 
-	}
-	~BaseAudio(){}
-
-
-	inline void SetDataFunction(std::function <bool(char ** data, int *len, double *pts)> func)
+	class Delegate
 	{
-		data_func_ = func;
-	}
+	public:
+		virtual bool onAudioGetData(char ** data, int *len, double *pts) = 0;
+		virtual void onAudioCurrent(int) = 0;
+		virtual void onAudioSeek() = 0;
+		virtual void onAudioFreeData(char*) = 0;
+	};
 
-	inline void SetBlockSeekFunction(std::function<bool()> func) {
-		seek_func_ = func;
-	}
+	virtual void setDelegate(BaseAudio::Delegate* dele) = 0;
+	virtual BaseAudio::Delegate* getDelegate() = 0; 
 
-	inline void SetStatusFunction(std::function<void(PlayerStatus)> func)
-	{
-		status_func_ = func;
-	}
 
-	inline void SetDurationFunction(std::function<void(int)> func)
-	{
-		dur_func_ = func;
-	}
-
-	inline void SetProgressFunction(std::function<void(int)> func)
-	{
-		cur_func_ = func;
-	}
-
-	inline void SetFreeDataFunction(std::function<void(char*)> func)
-	{
-		free_func_ = func;
-	}
 
 protected:
 
-
-	std::function<bool (char ** data, int *len, double *pts)> data_func_;
-
-	std::function<void(PlayerStatus)> status_func_;
-
-	std::function<void(int)> dur_func_;
-
-	std::function<void(int)> cur_func_;
-
-	std::function<bool ()> seek_func_;
-
-	std::function<void(char*)> free_func_;
 };
 

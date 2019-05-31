@@ -12,6 +12,8 @@
 #include "YMediaPlayer.h"
 #include "..\StreamIOMgr.h"
 #include "YMediaDecode.h"
+#include "BaseAudio.h"
+#include "BaseVideo.h"
 
 
 class YMediaDecode;
@@ -19,11 +21,16 @@ class BaseAudio;
 class BaseVideo;
 class YMediaPlayerImp:public YMediaPlayer
 					,public YMediaDecode::Delegate
+					,public BaseAudio::Delegate
+					,public BaseVideo::Delegate
 {
 public:
 	YMediaPlayerImp(AudioPlayMode audio_mode,VideoPlayMode video_mode);
 	virtual~YMediaPlayerImp() override;
-	
+	virtual void setDelegate(YMediaPlayer::Delegate* dele) override;
+
+	virtual YMediaPlayer::Delegate* getDelegate() override;
+
 	virtual bool setMedia(const char* path_file) override;
 	
 	virtual bool play() override;
@@ -41,37 +48,26 @@ public:
 	virtual void* getOpaque() override;
 
 //
-	virtual void onDecodeError(ymc::DecodeError) override;
-
-
-	virtual void onMediaInfo(MediaInfo) override;
-
-
-	virtual int onRead(char *data, int len) override;
-
-
-	virtual int64_t onSeek(int64_t offset, int whence) override;
-
-	virtual void setDelegate(YMediaPlayer::Delegate* dele) override;
-
-	virtual YMediaPlayer::Delegate* getDelegate() override;
-
-
 	
 protected:
-	void OnAudioDataFree(char *data);
 
-	bool OnSynchronizeVideo();
+	virtual void onDecodeError(ymc::DecodeError) override;
+	virtual void onMediaInfo(MediaInfo) override;
+	virtual int onRead(char *data, int len) override;
+	virtual int64_t onSeek(int64_t offset, int whence) override;
 
-	bool OnAudioDataFunction(char ** data, int *len,double *pts);
 
-	bool OnVideoDataFunction(char ** data, int *width, int *height, double *pts);
-
-	bool OnAudioSeekFunction();
-
-	bool OnVideoSeekFunction();
-
-	bool OnUserDisplayFunction(void *data,int width,int height);
+	virtual bool onVideoSeek() override;
+	virtual bool onVideoGetData(char ** data, int *width, int *height, double *pts) override;
+	virtual bool onVideoSync() override;
+	virtual void onVideoDisplay(void *data, int width, int height) override;
+	
+	
+	virtual bool onAudioGetData(char ** data, int *len, double *pts) override;
+	virtual void onAudioCurrent(int) override;
+	virtual void onAudioSeek() override;
+	virtual void onAudioFreeData(char*) override;
+protected:
 
 private:
 	void NotifyPlayerStatus(PlayerStatus);

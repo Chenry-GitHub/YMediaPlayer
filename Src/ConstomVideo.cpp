@@ -12,12 +12,22 @@ ConstomVideo::~ConstomVideo()
 {
 }
 
+void ConstomVideo::setDelegate(BaseVideo::Delegate * dele)
+{
+	delegate_ = dele;
+}
+
+BaseVideo::Delegate * ConstomVideo::getDelegate()
+{
+	return delegate_;
+}
+
 void ConstomVideo::PlayThread()
 {
 	while (false == is_stop_)
 	{
 		
-		seek_func_();
+		delegate_->onVideoSeek();
 
 		if (!IsPlaying())
 		{
@@ -29,19 +39,16 @@ void ConstomVideo::PlayThread()
 		int width;
 		int height;
 		double pts;
-		if (!data_func_(&data, &width, &height, &pts))
+		if (!delegate_->onVideoGetData(&data, &width, &height, &pts))
 		{
 			continue;
 		}
 
 		clock_ = pts;
 		
-		if (sync_func_())
+		if (delegate_->onVideoSync())
 		{
-			if (user_display_func_)
-			{
-				user_display_func_(data, width, height);
-			}
+			delegate_->onVideoDisplay(data, width, height);
 		}
 	}
 }
