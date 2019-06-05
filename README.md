@@ -1,5 +1,5 @@
 ### 简介
-A simple player demo,supported to cache file,download progress
+A simple player demo,supported to cache file,downloading progress
 ![Image text](https://github.com/what951006/YMediaPlayer/blob/dev/README/pic_0.png)
 
 ### 一、开发环境
