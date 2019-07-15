@@ -223,7 +223,7 @@ void YMediaDecode::decodeThread()
 	is_manual_stop_ = false;
 	uint8_t* pic_buff=nullptr;
 
-	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(YMediaDecode::readBuff, YMediaDecode::seekBuff, this);
+	std::shared_ptr<FormatCtx> format = std::make_shared<FormatCtx>(this);
 	format_ctx_ = format;
 	if (!format->initFormatCtx(path_file_.c_str()))
 	{
@@ -503,40 +503,6 @@ void YMediaDecode::flushAudioDecodec()
 		info_audio.flag = FLAG_FLUSH_DECODEC;
 		doConvertAudio(info_audio.pkg);
 	}
-}
-
-int YMediaDecode::readBuff(void *opaque, uint8_t *read_buf, int read_buf_size)
-{
-	YMediaDecode* op = (YMediaDecode*)opaque;
-	if (op)
-	{
-		int64_t result = op->getDelegate()->onRead((char*)read_buf, read_buf_size);
-		if (result > 0)
-		{
-			return result;
-		}
-		else if (result  == -2)
-		{
-			op->addError(ymc::ERROR_READ_TIME_OUT);
-		}
-		else if (result == -3)
-		{
-			op->addError(ymc::ERROR_READ_USER_INTERRUPT);
-		}
-		return -1;
-	}
-	return -1;
-}
-
-int64_t YMediaDecode::seekBuff(void *opaque, int64_t offset, int whence)
-{
-	YMediaDecode* op = (YMediaDecode*)opaque;
-	if (op)
-	{
-		int64_t result = op->getDelegate()->onSeek(offset, whence);
-		return result;
-	}
-	return	-1;
 }
 
 void YMediaDecode::notifyDecodeStatus(ymc::DecodeError error)

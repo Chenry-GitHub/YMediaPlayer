@@ -47,8 +47,6 @@ public:
 	public:
 		virtual void onDecodeError(ymc::DecodeError) = 0;
 		virtual void onMediaInfo(MediaInfo) = 0;
-		virtual int onRead(char *data, int len)=0;
-		virtual int64_t onSeek(int64_t offset, int whence) = 0;
 	};
 	YMediaDecode();
 	~YMediaDecode();
@@ -106,13 +104,6 @@ protected:
 	void flushVideoDecodec();
 	void flushAudioDecodec();
 
-	/*
-	return -2: time out 
-	return -3: user interrupt
-	*/
-	static int readBuff(void *opaque, uint8_t *buf, int buf_size);
-
-	static int64_t seekBuff(void *opaque, int64_t offset, int whence);
 private:
 
 	void notifyDecodeStatus(ymc::DecodeError);
@@ -160,56 +151,19 @@ private:
 };
 
 
-using ReadFunc = int(*) (void *opaque, uint8_t *buf, int buf_size);
-using SeekFunc = int64_t(*) (void *opaque, int64_t offset, int whence);
-
 class FormatCtx {
 public:
-	inline FormatCtx(ReadFunc read_func, SeekFunc seek_func, YMediaDecode* param)
+	inline FormatCtx(YMediaDecode* param)
 		: open_input_(false)
 		, deocdec_(param)
 	{
 		ctx_ = avformat_alloc_context();
 		pkg_ = av_packet_alloc();
 		av_init_packet(pkg_);
-#define  READ_BUFFER_SIZE 32768 //32KB
-		buffer_ = (unsigned char*)av_malloc(READ_BUFFER_SIZE);
-		ioctx_ = avio_alloc_context(buffer_, READ_BUFFER_SIZE, 0, param, read_func, NULL, seek_func);
-
-		std::memset(buffer_, 0, READ_BUFFER_SIZE);
-
-		int size = READ_BUFFER_SIZE - AVPROBE_PADDING_SIZE;
-
-		seek_func(param, 0, SEEK_SET);
-
-		int readBytes  = read_func(param, buffer_, size);
-
-		if (readBytes <= 0)
-		{
-			return;
-		}
-
-		seek_func(param, 0, SEEK_SET);
-
-		AVProbeData probe_data;
-		probe_data.filename = "";
-		probe_data.buf = buffer_;
-		probe_data.buf_size = readBytes;
-#if LIBAVFORMAT_VERSION_MAJOR > 55
-		probe_data.mime_type = nullptr;
-#endif
-
-		AVInputFormat* ret = av_probe_input_format(&probe_data, 1);
-		
-		ctx_->pb = ioctx_;
-		ctx_->iformat = ret;
-		ctx_->flags = AVFMT_FLAG_CUSTOM_IO;
 	}
 
 	inline ~FormatCtx() {
 		
-		if(ioctx_)
-			avio_context_free(&ioctx_);
 		
 		if (open_input_)
 		{
@@ -224,7 +178,7 @@ public:
 
 	bool initFormatCtx(const char* filename)
 	{
-		if (avformat_open_input(&ctx_, "", 0, 0) < 0) 
+		if (avformat_open_input(&ctx_, filename, 0, 0) < 0)
 		{
 			deocdec_->addError(ymc::ERROR_FORMAT);
 			return false;
@@ -254,7 +208,6 @@ public:
 	
 	bool open_input_;
 	unsigned char *buffer_ = nullptr;
-	AVIOContext *ioctx_=nullptr;
 	AVFormatContext* ctx_ =nullptr;
 	AVPacket *pkg_ = nullptr;
 	YMediaDecode* deocdec_=nullptr;

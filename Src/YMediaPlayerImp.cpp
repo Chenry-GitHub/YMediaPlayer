@@ -46,18 +46,6 @@ YMediaPlayerImp::YMediaPlayerImp(AudioPlayMode audio_mode, VideoPlayMode video_m
 	video_->setDelegate(this);
 
 	decoder_.setDelegate(this);
-
-
-	io_mgr_.buffer_func_ = std::bind([&](float percent) {
-		if (player_delegate_)
-			player_delegate_->onNetworkBuffer(this, percent);
-	}, std::placeholders::_1);
-
-	io_mgr_.status_func_= std::bind([&](PlayerStatus status)
-	{
-		notifyPlayerStatus(status);
-	},std::placeholders::_1);
-
 }
 
 YMediaPlayerImp::~YMediaPlayerImp()
@@ -74,12 +62,6 @@ bool YMediaPlayerImp::setMedia(const char* path_file)
 {
 	stop();
 	printf("Stop\n");
-
-	if (!io_mgr_.setUrl(path_file))
-	{
-		notifyPlayerStatus(PlayerStatus::ErrorUrl);
-		return false;
-	}
 	
 	decoder_.setMedia(path_file, AUDIO_OUT_SAMPLE_RATE, AUDIO_OUT_CHANNEL);
 	printf("decoder_.SetMedia\n");
@@ -122,9 +104,7 @@ bool YMediaPlayerImp::stop()
 	decoder_.conductVideoBlocking();
 	video_->endPlayThread();
 
-	io_mgr_.conduct();
 	decoder_.stopDecode();
-	io_mgr_.stop();
 	return true;
 }
 
@@ -178,16 +158,6 @@ void YMediaPlayerImp::onMediaInfo(MediaInfo info)
 	if (player_delegate_)
 		player_delegate_->onDurationChanged(this, (int)info.dur);
 	printf("OnMediaInfo :Dur-%f,\n", media_info_.dur);
-}
-
-int YMediaPlayerImp::onRead(char *data, int len)
-{
-	return 	io_mgr_.read(data, len);
-}
-
-int64_t YMediaPlayerImp::onSeek(int64_t offset, int whence)
-{
-	return 	io_mgr_.seek(offset, whence);
 }
 
 void YMediaPlayerImp::setDelegate(YMediaPlayer::Delegate* dele)

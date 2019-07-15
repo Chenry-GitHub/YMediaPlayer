@@ -10,7 +10,6 @@
 
 
 #include "YMediaPlayer.h"
-#include "StreamIOMgr.h"
 #include "YMediaDecode.h"
 #include "BaseAudio.h"
 #include "BaseVideo.h"
@@ -52,9 +51,6 @@ protected:
 
 	virtual void onDecodeError(ymc::DecodeError) override;
 	virtual void onMediaInfo(MediaInfo) override;
-	virtual int onRead(char *data, int len) override;
-	virtual int64_t onSeek(int64_t offset, int whence) override;
-
 
 	virtual bool onVideoSeek() override;
 	virtual bool onVideoGetData(char ** data, int *width, int *height, double *pts) override;
@@ -73,7 +69,6 @@ private:
 
 	MediaInfo media_info_;
 	YMediaDecode decoder_;
-	StreamIOMgr io_mgr_;
 
 
 	YMediaPlayer::Delegate* player_delegate_ = nullptr;
